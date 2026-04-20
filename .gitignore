@@ -93,5 +93,13 @@ app.*.map.json
 .env
 .env.*
 
+# Node.js / Bun
+node_modules/
+.bun/
+.bunfig.toml
+dist/
+build/
+*.tsbuildinfo
+
 # Claude Code
 .claude/
