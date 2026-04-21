@@ -109,3 +109,8 @@ node_modules
 .env
 
 /src/generated/prisma
+
+# Prisma
+backend/src/generated/
+backend/generated/
+.prisma/

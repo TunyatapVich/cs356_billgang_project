@@ -23,6 +23,7 @@ generator prismabox {
 model Users {
   id               String   @id @default(uuid()) @db.Uuid
   email            String   @unique @db.VarChar(255)
+  password_hash    String   @db.Text
   display_name     String?  @db.VarChar(255)
   avatar_url       String?  @db.Text
   promptpay_number String?  @db.VarChar(50)
