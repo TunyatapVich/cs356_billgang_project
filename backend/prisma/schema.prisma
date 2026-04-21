@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator prismabox {
+  provider                    = "prismabox"
+  typeboxImportDependencyName = "elysia"
+  typeboxImportVariableName   = "t"
+  inputModel                  = true
+  output                      = "../generated/prismabox"
+}
+
+model Users {
+  id               String   @id @default(uuid()) @db.Uuid
+  email            String   @unique @db.VarChar(255)
+  display_name     String?  @db.VarChar(255)
+  avatar_url       String?  @db.Text
+  promptpay_number String?  @db.VarChar(50)
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+
+  created_bills     Bills[]       @relation("BillCreator")
+  bill_members      BillMembers[]
+  item_assigns      ItemAssigns[]
+  payments_sent     Payments[]    @relation("PaymentFromUser")
+  payments_received Payments[]    @relation("PaymentToUser")
+
+  @@map("users")
+}
+
+model Bills {
+  id                 String   @id @default(uuid()) @db.Uuid
+  name               String   @db.VarChar(255)
+  date               DateTime @db.Timestamp(6)
+  created_by         String   @db.Uuid
+  status             String   @db.VarChar(50)
+  receipt_image_url  String?  @db.Text
+  service_charge_pct Decimal? @db.Decimal(5, 2)
+  vat_pct            Decimal? @db.Decimal(5, 2)
+  invite_code        String   @unique @db.VarChar(100)
+  created_at         DateTime @default(now()) @db.Timestamp(6)
+
+  creator      Users         @relation("BillCreator", fields: [created_by], references: [id], onUpdate: Cascade)
+  bill_items   BillItems[]
+  bill_members BillMembers[]
+  payments     Payments[]
+
+  @@index([created_by])
+  @@map("bills")
+}
+
+model BillItems {
+  id         String   @id @default(uuid()) @db.Uuid
+  bill_id    String   @db.Uuid
+  name       String   @db.VarChar(255)
+  quantity   Int
+  unit_price Decimal  @db.Decimal(12, 2)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  bill         Bills         @relation(fields: [bill_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  item_assigns ItemAssigns[]
+
+  @@index([bill_id])
+  @@map("bill_items")
+}
+
+model BillMembers {
+  id        String   @id @default(uuid()) @db.Uuid
+  bill_id   String   @db.Uuid
+  user_id   String   @db.Uuid
+  role      String   @db.VarChar(50)
+  joined_at DateTime @default(now()) @db.Timestamp(6)
+
+  bill Bills @relation(fields: [bill_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user Users @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([bill_id, user_id])
+  @@index([bill_id])
+  @@index([user_id])
+  @@map("bill_members")
+}
+
+model ItemAssigns {
+  id           String   @id @default(uuid()) @db.Uuid
+  bill_item_id String   @db.Uuid
+  user_id      String   @db.Uuid
+  assigned_at  DateTime @default(now()) @db.Timestamp(6)
+
+  bill_item BillItems @relation(fields: [bill_item_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user      Users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([bill_item_id, user_id])
+  @@index([bill_item_id])
+  @@index([user_id])
+  @@map("item_assigns")
+}
+
+model Payments {
+  id           String   @id @default(uuid()) @db.Uuid
+  bill_id      String   @db.Uuid
+  from_user_id String   @db.Uuid
+  to_user_id   String   @db.Uuid
+  amount       Decimal  @db.Decimal(12, 2)
+  status       String   @db.VarChar(50)
+  slip_url     String?  @db.Text
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+
+  bill      Bills @relation(fields: [bill_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  from_user Users @relation("PaymentFromUser", fields: [from_user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  to_user   Users @relation("PaymentToUser", fields: [to_user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([bill_id])
+  @@index([from_user_id])
+  @@index([to_user_id])
+  @@map("payments")
+}
