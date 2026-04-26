@@ -94,7 +94,7 @@ app.*.map.json
 .env.*
 
 # Node.js / Bun
-node_modules/
+**/node_modules/
 .bun/
 .bunfig.toml
 dist/
@@ -104,13 +104,12 @@ build/
 # Claude Code
 .claude/
 
-node_modules
-# Keep environment variables out of version control
-.env
-
-/src/generated/prisma
-
-# Prisma
-backend/src/generated/
+# Backend generated and local artifacts
 backend/generated/
+backend/src/generated/
+backend/.prisma/
+backend/prisma/dev.db*
+backend/prisma/*.db-journal
+
+# Prisma engines
 .prisma/
