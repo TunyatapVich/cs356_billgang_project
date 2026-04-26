@@ -1,3 +1,54 @@
+DJ SOJU
+bightx787
+กำลังแบ่งปันหน้าจอ
+
+amissyzx [CODE],  — 8/3/2569 21:55
+แค่รอเวลา
+DJ SOJU — 8/3/2569 23:33
+ประเภทไฟล์ที่แนบ: unknown
+image.png
+31.48 KB
+amissyzx [CODE],  — 10/3/2569 20:06
+เดะไปกุยังคงประชุมไม่เสร็จน้อง
+DJ SOJU — 10/3/2569 20:14
+Okay
+DJ SOJU — 1/4/2569 18:28
+https://colab.research.google.com/drive/1MLNMQ1pxh7JCWgiQnEdHh2aTwmOlL55Z?usp=sharing
+Google Colab
+
+DJ SOJU — 1/4/2569 18:38
+AIzaSyAUJicGZFy7HPpewRsoom8BAprC-mgO5BA
+user_query = "คำว่า Vidit คิออะไร"
+
+response = client.models.generate_content(
+    model=MODEL_ID,
+    contents=user_query
+)
+print(f"AI ตอบว่า: {response.text}")
+DJ SOJU — 1/4/2569 18:46
+AIzaSyC0MNW0MENRT0LHKyst18G-GQXxoi8DFZY
+ประเภทไฟล์ที่แนบ: unknown
+Untitled1.ipynb
+131.85 KB
+amissyzx [CODE],  — 21:11
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+
+message.txt
+2 KB
+﻿
+amissyzx
+amissyzx
+ 
+ 
+ 
+Working hours (response time): 
+Mon–Fri, 9:00 AM–10:00 PM.
+If you don’t hear back, please ping me again.
 # Miscellaneous
 *.class
 *.log
@@ -94,7 +145,7 @@ app.*.map.json
 .env.*
 
 # Node.js / Bun
-node_modules/
+**/node_modules/
 .bun/
 .bunfig.toml
 dist/
@@ -104,8 +155,14 @@ build/
 # Claude Code
 .claude/
 
-node_modules
-# Keep environment variables out of version control
-.env
+# Backend generated and local artifacts
+backend/generated/
+backend/src/generated/
+backend/.prisma/
+backend/prisma/dev.db*
+backend/prisma/*.db-journal
 
-/src/generated/prisma
+# Prisma engines
+.prisma/
+message.txt
+2 KB

@@ -6,6 +6,9 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
+    "@elysiajs/openapi": "^1.4.15",
+    "@neondatabase/serverless": "^1.1.0",
+    "@prisma/adapter-neon": "^7.8.0",
     "@prisma/client": "^7.7.0",
     "elysia": "latest",
     "prisma-adapter-bun-sqlite": "^0.7.1",
@@ -13,6 +16,7 @@
   },
   "devDependencies": {
     "bun-types": "latest",
+    "dotenv": "^17.4.2",
     "prisma": "^7.7.0"
   },
   "module": "src/index.js"
