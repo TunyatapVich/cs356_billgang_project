@@ -3,7 +3,6 @@ import Elysia, { t, type UnwrapSchema } from "elysia";
 import {
   Users,
   UsersPlain,
-  UsersPlainInputCreate,
 } from "../../../generated/prismabox/Users";
 import { __nullable__ } from "../../../generated/prismabox/__nullable__";
 

@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { AuthModel } from "./model";
-import { AuthService } from "./service";
+import { registerUser } from "./service";
 
 export const AuthModule = new Elysia({ prefix: "/auth" }).use(AuthModel).post(
   "/register",
@@ -10,7 +10,7 @@ export const AuthModule = new Elysia({ prefix: "/auth" }).use(AuthModel).post(
       return { message: "Password do not match" };
     }
 
-    const user = await AuthService.registerUser(body);
+    const user = await registerUser(body);
     set.status = 201;
     return user;
   },
