@@ -1,0 +1,45 @@
+sequenceDiagram
+    participant UI as Flutter UI
+    participant API as ElysiaJS API
+    participant DB as Neon DB
+
+    Note over UI,DB: ── Calculate who owes who ──
+
+    UI->>API: GET /bills/:id/debts
+    API->>DB: SELECT item_assigns JOIN bill_items JOIN bill_members
+    DB-->>API: raw assign data
+    API->>API: prorate each shared item ÷ number of assignees
+    API->>API: add service_charge + VAT per person
+    API->>API: run min-cash-flow algorithm
+    Note over API: reduces N*(N-1) possible transactions<br/>down to minimum needed
+    API-->>UI: [{from_user, to_user, amount}]
+
+    UI->>UI: show Debt Summary Screen
+    UI->>UI: show Bill Per Person breakdown
+
+    Note over UI,DB: ── User initiates payment ──
+
+    UI->>API: POST /payments {bill_id, from_user_id, to_user_id, amount}
+    API->>DB: INSERT payments {status: 'pending'}
+    DB-->>API: payment {id}
+    API->>API: generate PromptPay QR (EMVCo CRC-16)
+    Note over API: encode: promptpay_number + amount
+    API-->>UI: {qr_data, amount, to_user}
+
+    UI->>UI: show PromptPay QR Screen
+    Note over UI: user opens banking app<br/>scans QR → transfers
+
+    Note over UI,DB: ── Confirm payment ──
+
+    UI->>API: PUT /payments/:id/confirm {slip_url}
+    API->>DB: UPDATE payments SET status='confirmed', slip_url
+    DB-->>API: updated payment
+    API-->>UI: confirmed ✓
+    UI->>UI: debt status → "จ่ายแล้ว ✓"
+
+    alt All payments confirmed
+        UI->>API: PATCH /bills/:id {status: 'settled'}
+        API->>DB: UPDATE bills
+        DB-->>API: ok
+        API-->>UI: bill closed
+    end

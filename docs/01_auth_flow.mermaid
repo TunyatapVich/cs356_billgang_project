@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant UI as Flutter UI
+    participant FBA as Firebase Auth
+    participant API as ElysiaJS API
+    participant DB as Neon DB
+
+    Note over UI,DB: ── Email / Password Register ──
+
+    UI->>API: POST /auth/register {email, password}
+    API->>DB: INSERT users {email, hashed_password}
+    DB-->>API: user record
+    API-->>UI: JWT token
+    UI->>UI: store JWT (secure storage)
+    UI->>UI: navigate → Setup Profile
+
+    Note over UI,DB: ── Google Sign-In ──
+
+    UI->>FBA: signInWithGoogle()
+    FBA-->>UI: idToken
+    UI->>API: POST /auth/google {idToken}
+    API->>FBA: verifyIdToken(idToken)
+    FBA-->>API: decoded user info
+    API->>DB: UPSERT users
+    DB-->>API: user record
+    API-->>UI: JWT token
+    UI->>UI: store JWT (secure storage)
+
+    alt First login → no display_name yet
+        UI->>UI: navigate → Setup Profile
+        UI->>API: PUT /auth/profile {display_name, promptpay_number, avatar_url}
+        API->>DB: UPDATE users
+        DB-->>API: updated user
+        API-->>UI: success
+        UI->>UI: navigate → Home
+    else Returning user
+        UI->>UI: navigate → Home
+    end

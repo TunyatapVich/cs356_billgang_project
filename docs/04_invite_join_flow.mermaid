@@ -1,0 +1,34 @@
+sequenceDiagram
+    participant Owner as Owner (Flutter)
+    participant API as ElysiaJS API
+    participant DB as Neon DB
+    participant Friend as Friend (Flutter)
+
+    Note over Owner,DB: ── Owner generates invite ──
+
+    Owner->>API: POST /bills/:id/invite
+    API->>DB: SELECT invite_code FROM bills WHERE id
+    DB-->>API: invite_code (e.g. "ABC123")
+    API-->>Owner: {invite_code, deep_link}
+    Owner->>Owner: show QR Code + "Copy Link" button
+
+    Note over Owner,Friend: ── Friend joins via QR or link ──
+
+    Friend->>Friend: scan QR / tap deep link
+    Friend->>API: POST /bills/join/ABC123
+    API->>DB: SELECT bill WHERE invite_code = 'ABC123'
+    DB-->>API: bill found
+
+    alt User not yet a member
+        API->>DB: INSERT bill_members {bill_id, user_id, role: 'member'}
+        DB-->>API: member added
+        API->>DB: SELECT bill_items WHERE bill_id
+        DB-->>API: existing items list
+        API-->>Friend: {bill, items, members}
+        Friend->>Friend: navigate → Assign Screen
+    else Already a member
+        API-->>Friend: {bill, items, members} (rejoin)
+        Friend->>Friend: navigate → Assign Screen
+    end
+
+    Note over Owner: Owner sees new member<br/>appear in member list
