@@ -16,6 +16,7 @@ const app = new Elysia()
       },
     }),
   )
+
   .use(AuthModule)
   .get("/", () => "Hello Elysia - API docs at /docs")
   .listen(3000);
