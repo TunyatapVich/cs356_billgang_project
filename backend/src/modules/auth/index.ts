@@ -9,7 +9,7 @@ export const AuthModule = new Elysia({ prefix: "/auth" })
 
   .post(
     "/register",
-    async ({ body, jwt, set }) => {
+    async ({ body , jwt , set }) => {
       if (body.password !== body.password_confirm) {
         set.status = 400;
         return { message: "Passwords do not match" };
