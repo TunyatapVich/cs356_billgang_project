@@ -32,7 +32,7 @@ class AuthService {
       data: {
         'email': email,
         'password': password,
-        'password_confirm': password_confirm,
+        'password_confirm': passwordConfirm,
       },
     );
     return response.data as Map<String, dynamic>;
