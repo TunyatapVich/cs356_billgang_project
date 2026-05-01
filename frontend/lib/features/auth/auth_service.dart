@@ -8,12 +8,6 @@ class AuthService {
   final Dio _dio;
   const AuthService(this._dio);
 
-  // TODO 1: implement login
-  // - POST /auth/login with { email, password }
-  // - return response.data on 200
-  // - throw Exception(response.data['message']) on error (401 = wrong credentials)
-  //
-
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await _dio.post(
       '/auth/login',

@@ -40,7 +40,6 @@ class AuthNotifier extends AsyncNotifier<User?> {
   }
 
   // login() — calls AuthService (which calls the API), saves token, updates state
-  // TODO 3: implement login
   Future<void> login(String email, String password) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
