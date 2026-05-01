@@ -27,10 +27,10 @@ export class AuthService {
     }
   }
 
-  static async loginUser(email: string, password: string) {
-    const user = await prisma.users.findUnique({ where: { email } });
+  static async loginUser(data: {email: string, password: string}) {
+    const user = await prisma.users.findUnique({ where: {email: data.email } });
     if (!user) return null;
-    const valid = await Bun.password.verify(password, user.password_hash);
+    const valid = await Bun.password.verify(data.password, user.password_hash);
     if (!valid) return null;
     const { password_hash, ...safeUser } = user;
     return safeUser;
@@ -48,6 +48,14 @@ export class AuthService {
       where: { id: userId },
       data,
     });
+    return user;
+  }
+
+  static async getMe(userId: string) {
+    const user = await prisma.users.findUnique({
+      where: {id: userId},
+    });
+    if (!user) return "not found";
     return user;
   }
 }

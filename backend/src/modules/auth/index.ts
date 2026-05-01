@@ -37,7 +37,7 @@ export const AuthModule = new Elysia({ prefix: "/auth" })
   .post(
     "/login",
     async ({ body, jwt, set }) => {
-      const user = await AuthService.loginUser(body.email, body.password);
+      const user = await AuthService.loginUser(body);
       if (!user) {
         set.status = 401;
         return { message: "Invalid email or password" };
@@ -52,6 +52,21 @@ export const AuthModule = new Elysia({ prefix: "/auth" })
         401: "auth.error",
       },
     },
+  )
+
+  .get(
+    "/me",
+    async ({ jwt, headers , set}) => {
+      const raw = headers.authorization?.replace('Bearer ' , '');
+      const payload = raw ? await jwt.verify(raw) : null;
+      if (!payload?.sub) { 
+        set.status= 401;
+        return { message : 'go login bro'}
+      }
+      const user = await AuthService.getMe(payload.sub as string)
+      if (!user) { set.status = 404; return { message: 'User not found'};}
+      return user;
+    }
   )
 
   .put(
