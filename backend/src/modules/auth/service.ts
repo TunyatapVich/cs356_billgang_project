@@ -56,6 +56,7 @@ export class AuthService {
       where: {id: userId},
     });
     if (!user) return "not found";
-    return user;
+    const { password_hash , ...safeUser } = user;
+    return safeUser;;
   }
 }

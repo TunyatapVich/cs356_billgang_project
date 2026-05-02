@@ -64,8 +64,20 @@ export const AuthModule = new Elysia({ prefix: "/auth" })
         return { message : 'go login bro'}
       }
       const user = await AuthService.getMe(payload.sub as string)
-      if (!user) { set.status = 404; return { message: 'User not found'};}
-      return user;
+
+      if (user === "not found" || !user) {
+        set.status = 404;
+        return { message: 'User not found' };
+      }
+
+      return { token: raw as string, user };
+    },
+    {
+      response: {
+        200: "auth.response",
+        401: "auth.error",
+        404: "auth.error",
+      },
     }
   )
 
