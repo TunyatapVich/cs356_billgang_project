@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant UI as Flutter UI
+    participant API as ElysiaJS API
+    participant DB as Neon DB
+
+    UI->>API: POST /bills {name, date, service_charge_pct, vat_pct}
+    API->>DB: INSERT bills
+    DB-->>API: bill {id, invite_code}
+    API-->>UI: bill created
+    UI->>UI: navigate → Add Items Screen
+
+    loop User adds each item manually
+        UI->>UI: optimistic update (show item immediately)
+        UI->>API: POST /bills/:id/items {name, quantity, unit_price}
+        API->>DB: INSERT bill_items
+        DB-->>API: item record
+        API-->>UI: confirmed
+        alt API error
+            UI->>UI: rollback optimistic update
+        end
+    end
+
+    UI->>UI: navigate → Invite Screen

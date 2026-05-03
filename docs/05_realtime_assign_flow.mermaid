@@ -1,0 +1,51 @@
+sequenceDiagram
+    participant UA as User A (Flutter)
+    participant WS as ElysiaJS WebSocket
+    participant DB as Neon DB
+    participant UB as User B (Flutter)
+
+    Note over UA,UB: ── Both users connect to same bill room ──
+
+    UA->>WS: WS connect /ws/bills/:id
+    WS->>WS: subscribe room "bill:id"
+    WS-->>UA: connected ✓
+
+    UB->>WS: WS connect /ws/bills/:id
+    WS->>WS: subscribe room "bill:id"
+    WS-->>UB: connected ✓
+
+    Note over UA,UB: ── User A adds a new item ──
+
+    UA->>UA: optimistic update (show item immediately)
+    UA->>WS: send {type:"add_item", payload:{name:"ผัดไทย", unit_price:150}}
+    WS->>DB: INSERT bill_items
+    DB-->>WS: item {id, name, unit_price}
+    WS-->>UA: {type:"item_added", item} ← confirm
+    WS-->>UB: {type:"item_added", item} ← broadcast
+    UB->>UB: item appears in list live
+
+    Note over UA,UB: ── Both assign themselves simultaneously ──
+
+    UA->>WS: send {type:"assign_item", payload:{item_id, user_id:A}}
+    UB->>WS: send {type:"assign_item", payload:{item_id, user_id:B}}
+
+    WS->>DB: INSERT item_assigns {item_id, user_id:A}
+    WS->>DB: INSERT item_assigns {item_id, user_id:B}
+    DB-->>WS: both saved (shared item — no conflict)
+
+    WS-->>UA: {type:"item_assigned", assign:{item_id, user_id:A}}
+    WS-->>UB: {type:"item_assigned", assign:{item_id, user_id:A}}
+    WS-->>UA: {type:"item_assigned", assign:{item_id, user_id:B}}
+    WS-->>UB: {type:"item_assigned", assign:{item_id, user_id:B}}
+
+    Note over UA,UB: Both see both avatars on the item live
+
+    Note over UA,UB: ── User A disconnects (e.g. goes background) ──
+
+    UA->>WS: disconnect
+    WS->>WS: unsubscribe room "bill:id"
+    UA->>UA: auto-reconnect after 2s (retry logic)
+    UA->>WS: WS connect /ws/bills/:id
+    WS->>DB: SELECT current bill state
+    DB-->>WS: latest items + assigns
+    WS-->>UA: {type:"sync", items, assigns} ← full state resync

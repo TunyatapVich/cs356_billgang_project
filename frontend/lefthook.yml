@@ -1,0 +1,15 @@
+# lefthook.yml
+pre-commit:
+  parallel: true
+  commands:
+    gitleaks:
+      run: gitleaks protect -v --staged
+    format:
+      glob: "*.dart"
+      run: dart format {staged_files}
+    analyze:
+      glob: "*.dart"
+      run: flutter analyze {staged_files}
+    riverpod-lint:
+      glob: "*.dart"
+      run: dart run custom_lint

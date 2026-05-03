@@ -1,14 +1,9 @@
-// Model define the data structure and validation for the request and response
-import Elysia, { t, type UnwrapSchema } from "elysia";
-import {
-  Users,
-  UsersPlain,
-  UsersPlainInputCreate,
-} from "../../../generated/prismabox/Users";
+import Elysia, { t } from "elysia";
+import { UsersPlain } from "../../../generated/prismabox/Users";
 import { __nullable__ } from "../../../generated/prismabox/__nullable__";
 
 const RegisterPayload = t.Object({
-  email: t.String(),
+  email: t.String({ format: "email" }),
   display_name: t.Optional(__nullable__(t.String())),
   avatar_url: t.Optional(__nullable__(t.String())),
   promptpay_number: t.Optional(__nullable__(t.String())),
@@ -16,7 +11,28 @@ const RegisterPayload = t.Object({
   password_confirm: t.String({ minLength: 8 }),
 });
 
+const LoginPayload = t.Object({
+  email: t.String({ format: "email" }),
+  password: t.String({ minLength: 8 }),
+});
+
+const AuthResponse = t.Object({
+  token: t.String(),
+  user: t.Omit(UsersPlain, ["password_hash"]),
+});
+
+const ProfileUpdatePayload = t.Object({
+  display_name: t.Optional(__nullable__(t.String())),
+  avatar_url: t.Optional(__nullable__(t.String())),
+  promptpay_number: t.Optional(__nullable__(t.String())),
+});
+
+const ErrorResponse = t.Object({ message: t.String() });
+
 export const AuthModel = new Elysia({ name: "Model.Auth" }).model({
   "auth.register.request": RegisterPayload,
-  "auth.register.response": t.Omit(UsersPlain, ["password_hash"]),
+  "auth.login.request": LoginPayload,
+  "auth.profile.update.request": ProfileUpdatePayload,
+  "auth.response": AuthResponse,
+  "auth.error": ErrorResponse,
 });
