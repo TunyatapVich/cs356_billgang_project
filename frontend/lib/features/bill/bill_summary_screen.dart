@@ -33,9 +33,15 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       appBar: AppBar(
         title: const Text('สรุปบิล'),
       ),
-      body: const Center(
-        child: Text('Bill Summary'),
-      ),
+      body: Padding(
+       padding: const EdgeInsets.all(16.0),
+       child: Column(
+         crossAxisAlignment: CrossAxisAlignment.start,
+         children: const [
+          Text('ตรงนี้จะเป็นข้อมูลบิล'),
+         ],
+       ),
+     ),
     );
   }
 }
