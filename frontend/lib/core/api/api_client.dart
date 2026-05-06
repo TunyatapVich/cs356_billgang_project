@@ -1,7 +1,15 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../storage/token_storage.dart';
 
-const _baseUrl = 'http://localhost:3000';
+String get _baseUrl {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    return 'http://10.0.2.2:3000';
+  }
+
+  return 'http://localhost:3000';
+}
 
 // Unauthenticated Dio — for login / register (no token needed)
 // Same idea as: export const axios = axios.create({ baseURL }) in Next.js
@@ -10,20 +18,21 @@ final dioProvider = Provider<Dio>((ref) {
 });
 
 // Authenticated Dio — for protected endpoints (attaches JWT from storage)
-// Use this in bill, assign, settlement services once auth is done
-//
-// final authDioProvider = Provider<Dio>((ref) {
-//   final token = ref.watch(/* tokenProvider — wire up after auth is done */);
-//   final dio = Dio(BaseOptions(baseUrl: _baseUrl));
-//   if (token != null) {
-//     dio.interceptors.add(
-//       InterceptorsWrapper(
-//         onRequest: (options, handler) {
-//           options.headers['Authorization'] = 'Bearer $token';
-//           handler.next(options);
-//         },
-//       ),
-//     );
-//   }
-//   return dio;
-// });
+// Use this in bill, assign, settlement services.
+final authDioProvider = Provider<Dio>((ref) {
+  final dio = Dio(BaseOptions(baseUrl: _baseUrl));
+
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await TokenStorage.read();
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
+      },
+    ),
+  );
+
+  return dio;
+});

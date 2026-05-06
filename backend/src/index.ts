@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { openapi } from "@elysiajs/openapi";
 import { AuthModule } from "./modules/auth";
+import { BillModule } from "./modules/bills";
 
 const app = new Elysia()
   .use(
@@ -18,6 +19,7 @@ const app = new Elysia()
   )
 
   .use(AuthModule)
+  .use(BillModule)
   .get("/", () => "Hello Elysia - API docs at /docs")
   .listen(3000);
 

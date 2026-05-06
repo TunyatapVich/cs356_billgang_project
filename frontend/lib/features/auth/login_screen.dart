@@ -29,7 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.read(authProvider);
     authState.when(
       data: (user) {
-        if (user != null) context.go('/home');
+        if (user != null) context.go('/bills');
       },
       error: (e, _) => setState(() => _errorMessage = e.toString()),
       loading: () {},
@@ -38,6 +38,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authProvider, (previous, next) {
+      final user = next.whenOrNull(data: (user) => user);
+      if (user != null) context.go('/bills');
+    });
+
     final isLoading = ref.watch(authProvider).isLoading;
 
     return Scaffold(

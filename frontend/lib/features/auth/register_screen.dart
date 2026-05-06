@@ -35,7 +35,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final authState = ref.read(authProvider);
     authState.when(
       data: (user) {
-        if (user != null) context.go('/home');
+        if (user != null) context.go('/bills');
       },
       error: (e, _) => setState(() => _errorMessage = e.toString()),
       loading: () {},

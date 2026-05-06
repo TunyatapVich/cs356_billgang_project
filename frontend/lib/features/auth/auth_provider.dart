@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/api/api_client.dart';
 import '../../core/storage/token_storage.dart';
 import 'auth_service.dart';
 
@@ -35,8 +36,15 @@ class AuthNotifier extends AsyncNotifier<User?> {
   Future<User?> build() async {
     final token = await TokenStorage.read();
     if (token == null) return null;
-    // TODO later: call GET /auth/me to restore session — for now just return null
-    return null;
+
+    try {
+      final response = await ref.read(authDioProvider).get('/auth/me');
+      final data = response.data as Map<String, dynamic>;
+      return User.fromJson(data['user'] as Map<String, dynamic>);
+    } catch (_) {
+      await TokenStorage.delete();
+      return null;
+    }
   }
 
   // login() — calls AuthService (which calls the API), saves token, updates state
