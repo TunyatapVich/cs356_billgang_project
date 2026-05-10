@@ -13,14 +13,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordConfirmController = TextEditingController();
-  String? _errorMessage;
+  String? _errorMessage; //use state ตั้งไว้ 0 
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _passwordConfirmController.dispose();
-    super.dispose();
+    super.dispose(); //ทำลายไปหน้าใหม่
   }
 
   Future<void> _submit() async {
@@ -35,12 +35,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final authState = ref.read(authProvider);
     authState.when(
       data: (user) {
-        if (user != null) context.go('/home');
+        if (user != null) context.go('/bills');
       },
       error: (e, _) => setState(() => _errorMessage = e.toString()),
       loading: () {},
     );
-  }
+  }// รอเรัียกใช้ Actyion
 
   @override
   Widget build(BuildContext context) {
