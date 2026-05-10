@@ -14,7 +14,7 @@ class BillService {
     required double vatPercent,
   }) async {
     final response = await _dio.post(
-      '/bills/create',
+      '/bills',
       data: {
         'name': name,
         'date': date.toIso8601String(),
