@@ -13,7 +13,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordConfirmController = TextEditingController();
-  String? _errorMessage; //use state ตั้งไว้ 0 
+  String? _errorMessage; //use state ตั้งไว้ 0
 
   @override
   void dispose() {
@@ -40,19 +40,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       error: (e, _) => setState(() => _errorMessage = e.toString()),
       loading: () {},
     );
-  }// รอเรัียกใช้ Actyion
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [Text('Register', style: TextStyle(fontSize: 24))],
+    return Scaffold(
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text("Register", style: TextStyle(fontSize: 32)),
+          SizedBox(height: 32),
+          TextField(
+            controller: _emailController,
+            decoration: InputDecoration(labelText: 'Email'),
           ),
-        ),
+        ],
       ),
     );
   }

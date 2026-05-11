@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/api/api_client.dart';
 import '../../core/storage/token_storage.dart';
 import 'auth_service.dart';
 
@@ -31,20 +30,11 @@ class User {
 // AuthNotifier — same as a Zustand store or useReducer auth context in React
 // AsyncNotifier<User?> means state is one of: loading | error | User | null (logged out)
 class AuthNotifier extends AsyncNotifier<User?> {
-  // build() runs once on startup — like checking localStorage for a token on page load
+  // build() runs once on startup — clear any old token so the app starts at login
   @override
   Future<User?> build() async {
-    final token = await TokenStorage.read();
-    if (token == null) return null;
-
-    try {
-      final response = await ref.read(authDioProvider).get('/auth/me');
-      final data = response.data as Map<String, dynamic>;
-      return User.fromJson(data['user'] as Map<String, dynamic>);
-    } catch (_) {
-      await TokenStorage.delete();
-      return null;
-    }
+    await TokenStorage.delete();
+    return null;
   }
 
   // login() — calls AuthService (which calls the API), saves token, updates state

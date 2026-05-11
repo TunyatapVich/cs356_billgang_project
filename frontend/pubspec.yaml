@@ -54,6 +54,9 @@ dependencies:
   # QR code (PromptPay)
   qr_flutter: ^4.1.0
 
+  # Image picker (camera + gallery for OCR)
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

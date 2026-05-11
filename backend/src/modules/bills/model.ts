@@ -2,7 +2,7 @@ import Elysia, { t, type Static } from "elysia";
 
 export const BillCreatePayload = t.Object({
   name: t.String(),
-  date: t.Date(),
+  date: t.String(),
   vat_pct: t.Optional(t.Number({ minimum: 0 })),
   service_charge_pct: t.Optional(t.Number({ minimum: 0 })),
 });
@@ -14,7 +14,7 @@ export const BillJoinParams = t.Object({ code: t.String() });
 
 export const BillPatchPayload = t.Object({
   name: t.Optional(t.String()),
-  date: t.Optional(t.Date()),
+  date: t.Optional(t.String()),
   status: t.Optional(t.String()),
   vat_pct: t.Optional(t.Number({ minimum: 0 })),
   service_charge_pct: t.Optional(t.Number({ minimum: 0 })),
