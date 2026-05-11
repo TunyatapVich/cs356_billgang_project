@@ -89,8 +89,7 @@ class _BillListScreenState extends ConsumerState<BillListScreen> {
               backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
             ),
-            onPressed: () =>
-                ref.read(billListProvider.notifier).refreshBills(),
+            onPressed: () => ref.read(billListProvider.notifier).refreshBills(),
             child: const Text('Try Again'),
           ),
         ],
@@ -267,28 +266,35 @@ class _BillCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: cardWhite,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+        onTap: () => context.go('/bill/${bill.id}/items'),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: cardWhite,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 16),
-          _buildMetaRow(),
-          const SizedBox(height: 12),
-          _buildPercentRow(),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 16),
+              _buildMetaRow(),
+              const SizedBox(height: 12),
+              _buildPercentRow(),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -327,6 +333,8 @@ class _BillCard extends StatelessWidget {
           ),
         ),
         _buildStatusChip(),
+        const SizedBox(width: 8),
+        const Icon(Icons.chevron_right, color: textGray, size: 22),
       ],
     );
   }
