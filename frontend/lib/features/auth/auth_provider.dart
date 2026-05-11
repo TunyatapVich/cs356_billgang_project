@@ -69,6 +69,21 @@ class AuthNotifier extends AsyncNotifier<User?> {
     await TokenStorage.delete();
     state = const AsyncData(null);
   }
+
+  Future<void> updateProfile({
+    String? displayName,
+    String? avatarUrl,
+    String? promptpayNumber,
+  }) async {
+    state = await AsyncValue.guard(() async {
+      final data = await ref.read(authServiceProvider).updateProfile(
+        displayName: displayName,
+        avatarUrl: avatarUrl,
+        promptpayNumber: promptpayNumber,
+      );
+      return User.fromJson(data['user'] as Map<String, dynamic>);
+    });
+  }
 }
 
 // The provider — exposes AuthNotifier to any widget via ref.watch / ref.read

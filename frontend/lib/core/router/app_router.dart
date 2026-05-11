@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/register_screen.dart';
+import '../../features/auth/profile_setup_screen.dart';
 import '../../features/bill/bill_list_screen.dart';
 import '../../features/bill/create_bill_screen.dart';
 import '../../features/bill/add_items_screen.dart';
@@ -32,6 +33,10 @@ final appRouter = GoRouter(
       path: '/bill/:id/ocr',
       builder: (context, state) =>
           OcrReviewScreen(billId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileSetupScreen(),
     ),
     GoRoute(
       path: '/bill/:id/invite',

@@ -50,6 +50,10 @@ class _BillListScreenState extends ConsumerState<BillListScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.person_outline, color: primaryBlue),
+            onPressed: () => context.go('/profile'),
+          ),
+          IconButton(
             icon: const Icon(Icons.add_circle_outline, color: primaryBlue),
             onPressed: () => context.go('/bill/create'),
           ),

@@ -31,6 +31,22 @@ class AuthService {
     );
     return response.data as Map<String, dynamic>;
   }
+
+  Future<Map<String, dynamic>> updateProfile({
+    String? displayName,
+    String? avatarUrl,
+    String? promptpayNumber,
+  }) async {
+    final response = await _dio.put(
+      '/auth/profile',
+      data: {
+        if (displayName != null) 'display_name': displayName,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+        if (promptpayNumber != null) 'promptpay_number': promptpayNumber,
+      },
+    );
+    return response.data as Map<String, dynamic>;
+  }
 }
 
 final authServiceProvider = Provider<AuthService>((ref) {
