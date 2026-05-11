@@ -22,8 +22,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   static const cardWhite = Colors.white;
   static const textDark = Color(0xFF2C3246);
   static const textGray = Color(0xFF8E95A9);
-  static const inputFill = Color(0xFFF2F4FC);
   static const inputBorder = Color(0xFFDCDFEA);
+  static const errorRed = Color(0xFFE84545);
+
+  String? _emailError;
+  String? _passwordError;
+  String? _confirmError;
 
   @override
   void dispose() {
@@ -33,7 +37,47 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
+  bool _validate() {
+    bool valid = true;
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+      _confirmError = null;
+    });
+
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() => _emailError = 'Email is required');
+      valid = false;
+    } else if (!RegExp(r'^[\w\.\-]+@[\w\.\-]+\.\w+$').hasMatch(email)) {
+      setState(() => _emailError = 'Enter a valid email address');
+      valid = false;
+    }
+
+    final password = _passwordController.text;
+    if (password.isEmpty) {
+      setState(() => _passwordError = 'Password is required');
+      valid = false;
+    } else if (password.length < 6) {
+      setState(() => _passwordError = 'Password must be at least 6 characters');
+      valid = false;
+    }
+
+    final confirm = _passwordConfirmController.text;
+    if (confirm.isEmpty) {
+      setState(() => _confirmError = 'Please confirm your password');
+      valid = false;
+    } else if (confirm != password) {
+      setState(() => _confirmError = 'Passwords do not match');
+      valid = false;
+    }
+
+    return valid;
+  }
+
   Future<void> _submit() async {
+    if (!_validate()) return;
+
     setState(() => _errorMessage = null);
     await ref.read(authProvider.notifier).register(
           _emailController.text.trim(),
@@ -64,22 +108,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-              _buildHeader(),
-              const SizedBox(height: 32),
-              _buildEmailField(),
-              const SizedBox(height: 16),
-              _buildPasswordField(),
-              const SizedBox(height: 16),
-              _buildConfirmPasswordField(),
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 12),
-                _buildErrorMessage(),
+                _buildHeader(),
+                const SizedBox(height: 32),
+                _buildEmailField(),
+                const SizedBox(height: 16),
+                _buildPasswordField(),
+                const SizedBox(height: 16),
+                _buildConfirmPasswordField(),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  _buildErrorBanner(_errorMessage!),
+                ],
+                const SizedBox(height: 24),
+                _buildRegisterButton(isLoading),
+                const SizedBox(height: 20),
+                _buildLoginLink(),
               ],
-              const SizedBox(height: 24),
-              _buildRegisterButton(isLoading),
-              const SizedBox(height: 20),
-              _buildLoginLink(),
-            ],
             ),
           ),
         ),
@@ -87,33 +131,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  
   Widget _buildHeader() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE4E6FF),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: const Icon(Icons.person_add, color: primaryBlue, size: 30),
-        ),
-        const SizedBox(height: 20),
         const Text(
           'Create Account',
           style: TextStyle(
             color: textDark,
-            fontSize: 26,
+            fontSize: 28,
             fontWeight: FontWeight.bold,
           ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Join BillGang to start splitting bills with friends.',
-          style: TextStyle(color: textGray, fontSize: 14),
         ),
       ],
     );
@@ -125,6 +153,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       hintText: 'Email address',
       keyboardType: TextInputType.emailAddress,
       prefixIcon: Icons.email_outlined,
+      errorText: _emailError,
     );
   }
 
@@ -134,6 +163,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       hintText: 'Password',
       obscureText: _obscurePassword,
       prefixIcon: Icons.lock_outline,
+      errorText: _passwordError,
       suffixIcon: IconButton(
         icon: Icon(
           _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -151,6 +181,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       hintText: 'Confirm password',
       obscureText: _obscureConfirm,
       prefixIcon: Icons.lock_outline,
+      errorText: _confirmError,
       suffixIcon: IconButton(
         icon: Icon(
           _obscureConfirm ? Icons.visibility_off : Icons.visibility,
@@ -169,69 +200,88 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     Widget? suffixIcon,
     bool obscureText = false,
     TextInputType? keyboardType,
+    String? errorText,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cardWhite,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        style: const TextStyle(color: textDark, fontSize: 15),
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: const TextStyle(color: textGray, fontSize: 14),
-          prefixIcon: prefixIcon != null
-              ? Icon(prefixIcon, color: textGray, size: 20)
-              : null,
-          suffixIcon: suffixIcon,
-          filled: true,
-          fillColor: cardWhite,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
-          border: OutlineInputBorder(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: cardWhite,
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: inputBorder, width: 1),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: primaryBlue, width: 1.5),
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            style: const TextStyle(color: textDark, fontSize: 15),
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: const TextStyle(color: textGray, fontSize: 14),
+              prefixIcon: prefixIcon != null
+                  ? Icon(prefixIcon, color: textGray, size: 20)
+                  : null,
+              suffixIcon: suffixIcon,
+              filled: true,
+              fillColor: cardWhite,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: errorText != null ? errorRed : inputBorder,
+                  width: errorText != null ? 1.2 : 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: errorText != null ? errorRed : primaryBlue,
+                  width: 1.5,
+                ),
+              ),
+            ),
           ),
         ),
-      ),
+        if (errorText != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            errorText,
+            style: const TextStyle(color: errorRed, fontSize: 12),
+          ),
+        ],
+      ],
     );
   }
 
-  Widget _buildErrorMessage() {
+  Widget _buildErrorBanner(String message) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
+        color: errorRed.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+          const Icon(Icons.error_outline, color: errorRed, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              _errorMessage!,
-              style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+              message,
+              style: const TextStyle(color: errorRed, fontSize: 13),
             ),
           ),
         ],
@@ -251,7 +301,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          shadowColor: primaryBlue.withValues(alpha: 0.3),
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
         child: isLoading
