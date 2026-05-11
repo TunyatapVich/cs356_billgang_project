@@ -57,14 +57,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       backgroundColor: bgLight,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 32),
-              _buildBackButton(),
-              const SizedBox(height: 24),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               _buildHeader(),
               const SizedBox(height: 32),
               _buildEmailField(),
@@ -81,34 +80,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               const SizedBox(height: 20),
               _buildLoginLink(),
             ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildBackButton() {
-    return GestureDetector(
-      onTap: () => context.go('/login'),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: cardWhite,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.arrow_back, color: textDark, size: 22),
-      ),
-    );
-  }
-
+  
   Widget _buildHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
