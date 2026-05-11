@@ -114,11 +114,12 @@ class BillListNotifier extends AsyncNotifier<List<Bill>> {
   }
 
   Future<void> refreshBills() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    state = state.whenData((data) => data); // preserve current data while loading
+    final fresh = await AsyncValue.guard(() async {
       final data = await ref.read(billServiceProvider).listBills();
       return data.map(Bill.fromJson).toList();
     });
+    state = fresh;
   }
 }
 
