@@ -13,6 +13,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _errorMessage;
+  bool _obscurePassword = true;
+
+  static const primaryBlue = Color(0xFF4E54C8);
+  static const bgLight = Color(0xFFF6F8FD);
+  static const cardWhite = Colors.white;
+  static const textDark = Color(0xFF2C3246);
+  static const textGray = Color(0xFF8E95A9);
+  static const inputBorder = Color(0xFFDCDFEA);
+  static const errorRed = Color(0xFFE84545);
+
+  String? _emailError;
+  String? _passwordError;
 
   @override
   void dispose() {
@@ -21,7 +33,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  bool _validate() {
+    bool valid = true;
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+    });
+
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() => _emailError = 'Email is required');
+      valid = false;
+    } else if (!RegExp(r'^[\w\.\-]+@[\w\.\-]+\.\w+$').hasMatch(email)) {
+      setState(() => _emailError = 'Enter a valid email address');
+      valid = false;
+    }
+
+    final password = _passwordController.text;
+    if (password.isEmpty) {
+      setState(() => _passwordError = 'Password is required');
+      valid = false;
+    }
+
+    return valid;
+  }
+
   Future<void> _submit() async {
+    if (!_validate()) return;
+
     setState(() => _errorMessage = null);
     await ref
         .read(authProvider.notifier)
@@ -38,50 +77,234 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(authProvider, (previous, next) {
-      final user = next.whenOrNull(data: (user) => user);
-      if (user != null) context.go('/bills');
-    });
-
     final isLoading = ref.watch(authProvider).isLoading;
 
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('BillGang', style: TextStyle(fontSize: 32)),
-            const SizedBox(height: 32),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
+      backgroundColor: bgLight,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 32),
+                _buildEmailField(),
+                const SizedBox(height: 16),
+                _buildPasswordField(),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  _buildErrorBanner(_errorMessage!),
+                ],
+                const SizedBox(height: 24),
+                _buildLoginButton(isLoading),
+                const SizedBox(height: 20),
+                _buildRegisterLink(),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 8),
-            if (_errorMessage != null)
-              Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 16),
-            isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _submit,
-                    child: const Text('Login'),
-                  ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => context.go('/register'),
-              child: const Text("Don't have an account? Register"),
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          'BillGang boo',
+          style: TextStyle(
+            color: textDark,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmailField() {
+    return _buildTextField(
+      controller: _emailController,
+      hintText: 'Email address',
+      keyboardType: TextInputType.emailAddress,
+      prefixIcon: Icons.email_outlined,
+      errorText: _emailError,
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return _buildTextField(
+      controller: _passwordController,
+      hintText: 'Password',
+      obscureText: _obscurePassword,
+      prefixIcon: Icons.lock_outline,
+      errorText: _passwordError,
+      suffixIcon: IconButton(
+        icon: Icon(
+          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+          color: textGray,
+          size: 20,
+        ),
+        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hintText,
+    IconData? prefixIcon,
+    Widget? suffixIcon,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    String? errorText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: cardWhite,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            style: const TextStyle(color: textDark, fontSize: 15),
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: const TextStyle(color: textGray, fontSize: 14),
+              prefixIcon: prefixIcon != null
+                  ? Icon(prefixIcon, color: textGray, size: 20)
+                  : null,
+              suffixIcon: suffixIcon,
+              filled: true,
+              fillColor: cardWhite,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: errorText != null ? errorRed : inputBorder,
+                  width: errorText != null ? 1.2 : 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: errorText != null ? errorRed : primaryBlue,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (errorText != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            errorText,
+            style: const TextStyle(color: errorRed, fontSize: 12),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: errorRed.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: errorRed, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(color: errorRed, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoginButton(bool isLoading) {
+    return SizedBox(
+      height: 56,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : _submit,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : const Text(
+                'Sign in',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildRegisterLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          "Don't have an account? ",
+          style: TextStyle(color: textGray, fontSize: 14),
+        ),
+        GestureDetector(
+          onTap: () => context.go('/register'),
+          child: const Text(
+            'Register',
+            style: TextStyle(
+              color: primaryBlue,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
