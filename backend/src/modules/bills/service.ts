@@ -9,8 +9,34 @@ import type {
   BillPatchRequest,
 } from "./model";
 
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const numbers = "0123456789";
+const inviteCodePattern = /^[A-Z]{3}\d{5}$/;
+
+const randomText = (source: string, length: number) =>
+  Array.from(
+    { length },
+    () => source[Math.floor(Math.random() * source.length)],
+  ).join("");
+
 const generateInviteCode = () =>
-  Math.random().toString(36).substring(2, 8).toUpperCase();
+  `${randomText(letters, 3)}${randomText(numbers, 5)}`;
+
+const isInviteCodeValid = (code?: string | null) =>
+  code !== undefined && code !== null && inviteCodePattern.test(code);
+
+const createInviteCode = async () => {
+  for (let i = 0; i < 10; i++) {
+    const code = generateInviteCode();
+    const exists = await prisma.bills.findUnique({
+      where: { invite_code: code },
+    });
+
+    if (!exists) return code;
+  }
+
+  throw new Error("INVITE_CODE_FAILED");
+};
 
 const serializeBill = (bill: any) => ({
   ...bill,
@@ -106,7 +132,7 @@ export class BillService {
         vat_pct: data.vat_pct ?? 0,
         service_charge_pct: data.service_charge_pct ?? 0,
         status: "active",
-        invite_code: generateInviteCode(),
+        invite_code: await createInviteCode(),
         bill_members: {
           create: { user_id: userid, role: "owner" },
         },
@@ -201,10 +227,10 @@ export class BillService {
     await this.assertMember(userid, billId);
     let bill = await prisma.bills.findUnique({ where: { id: billId } });
     if (!bill) throw new Error("NOT_FOUND");
-    if (!bill.invite_code) {
+    if (!isInviteCodeValid(bill.invite_code)) {
       bill = await prisma.bills.update({
         where: { id: billId },
-        data: { invite_code: generateInviteCode() },
+        data: { invite_code: await createInviteCode() },
       });
     }
     const deepLink = `billgang://join/${bill.invite_code}`;
@@ -212,7 +238,9 @@ export class BillService {
   }
 
   static async joinByCode(userid: string, code: string) {
-    const bill = await prisma.bills.findUnique({ where: { invite_code: code } });
+    const bill = await prisma.bills.findUnique({
+      where: { invite_code: code.toUpperCase() },
+    });
     if (!bill) throw new Error("NOT_FOUND");
 
     await prisma.billMembers.upsert({
