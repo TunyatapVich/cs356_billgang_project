@@ -22,6 +22,7 @@ class _BillListScreenState extends ConsumerState<BillListScreen> {
   static const textGray = Color(0xFF8E95A9);
   static const inputFill = Color(0xFFF2F4FC);
   static const inputBorder = Color(0xFFDCDFEA);
+  static const errorRed = Color(0xFFE84545);
 
   @override
   void dispose() {
@@ -63,37 +64,58 @@ class _BillListScreenState extends ConsumerState<BillListScreen> {
   }
 
   Widget _buildError(Object error) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, color: primaryBlue, size: 42),
-          const SizedBox(height: 12),
-          const Text(
-            'Unable to load bills',
-            style: TextStyle(
-              color: textDark,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: errorRed.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(Icons.error_outline, color: errorRed, size: 32),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            error.toString(),
-            style: const TextStyle(color: textGray, fontSize: 13),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
+            const SizedBox(height: 20),
+            const Text(
+              'Unable to load bills',
+              style: TextStyle(
+                color: textDark,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            onPressed: () => ref.read(billListProvider.notifier).refreshBills(),
-            child: const Text('Try Again'),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              style: const TextStyle(color: textGray, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryBlue,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                ),
+                onPressed: () => ref.read(billListProvider.notifier).refreshBills(),
+                child: const Text(
+                  'Try Again',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -149,12 +171,12 @@ class _BillListScreenState extends ConsumerState<BillListScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: primaryBlue,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: primaryBlue.withValues(alpha: 0.18),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -169,32 +191,41 @@ class _BillListScreenState extends ConsumerState<BillListScreen> {
             child: const Icon(Icons.receipt_long, color: Colors.white),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Bill Overview',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  'Track your active and finished shared bills.',
+                const SizedBox(height: 4),
+                const Text(
+                  'Track your shared bills.',
                   style: TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ],
             ),
           ),
-          Text(
-            '$total',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$total',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -208,13 +239,13 @@ class _BillListScreenState extends ConsumerState<BillListScreen> {
       onChanged: (value) => setState(() => _keyword = value.trim()),
       decoration: InputDecoration(
         filled: true,
-        fillColor: inputFill,
-        hintText: 'Search bill name or invite code',
+        fillColor: cardWhite,
+        hintText: 'Search bill name or code',
         hintStyle: const TextStyle(color: textGray, fontSize: 14),
         prefixIcon: const Icon(Icons.search, color: textGray),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 14,
+          vertical: 16,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -229,27 +260,55 @@ class _BillListScreenState extends ConsumerState<BillListScreen> {
   }
 
   Widget _buildEmpty() {
-    return ListView(
-      children: const [
-        SizedBox(height: 110),
-        Icon(Icons.receipt_long, color: primaryBlue, size: 44),
-        SizedBox(height: 12),
-        Text(
-          'No bills found',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: textDark,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE4E6FF),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(Icons.receipt_long, color: primaryBlue, size: 32),
           ),
-        ),
-        SizedBox(height: 6),
-        Text(
-          'Create your first bill or try another search.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: textGray, fontSize: 13),
-        ),
-      ],
+          const SizedBox(height: 20),
+          const Text(
+            'No bills found',
+            style: TextStyle(
+              color: textDark,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Create your first bill to get started.',
+            style: TextStyle(color: textGray, fontSize: 14),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 48,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: () => context.go('/bill/create'),
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text(
+                'Create Bill',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -270,18 +329,18 @@ class _BillCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         onTap: () => context.go('/bill/${bill.id}/items'),
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: cardWhite,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -434,20 +493,8 @@ class _BillCard extends StatelessWidget {
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).toLowerCase();
 
   String _formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

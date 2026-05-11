@@ -6,14 +6,12 @@ class SkeletonLoader extends StatelessWidget {
 
   static const bgLight = Color(0xFFF6F8FD);
   static const cardWhite = Colors.white;
-  static const primaryBlue = Color(0xFF4E54C8);
   static const shimmerBase = Color(0xFFE8EBF4);
   static const shimmerHighlight = Color(0xFFF6F8FD);
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,35 +38,10 @@ class SkeletonLoader extends StatelessWidget {
       highlightColor: shimmerHighlight,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        height: 96,
         decoration: BoxDecoration(
           color: cardWhite,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: cardWhite,
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            const SizedBox(width: 16),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: 4),
-                  _SkeletonBox(width: 140, height: 18),
-                  SizedBox(height: 8),
-                  _SkeletonBox(width: 200, height: 13),
-                ],
-              ),
-            ),
-            const _SkeletonBox(width: 36, height: 36),
-          ],
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
     );
@@ -92,7 +65,14 @@ class SkeletonLoader extends StatelessWidget {
     return Shimmer.fromColors(
       baseColor: shimmerBase,
       highlightColor: shimmerHighlight,
-      child: const _SkeletonBox(width: 110, height: 20),
+      child: Container(
+        width: 110,
+        height: 20,
+        decoration: BoxDecoration(
+          color: shimmerBase,
+          borderRadius: BorderRadius.circular(6),
+        ),
+      ),
     );
   }
 
@@ -104,13 +84,12 @@ class SkeletonLoader extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: cardWhite,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 46,
@@ -125,14 +104,28 @@ class SkeletonLoader extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _SkeletonBox(width: 120, height: 16),
+                      Container(
+                        width: 120,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: shimmerBase,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      const _SkeletonBox(width: 80, height: 12),
+                      Container(
+                        width: 80,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: shimmerBase,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  width: 60,
+                  width: 64,
                   height: 28,
                   decoration: BoxDecoration(
                     color: shimmerBase,
@@ -144,43 +137,51 @@ class SkeletonLoader extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                const _SkeletonBox(width: 80, height: 30),
+                Container(
+                  width: 90,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: shimmerBase,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 const SizedBox(width: 8),
-                const _SkeletonBox(width: 100, height: 30),
+                Container(
+                  width: 90,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: shimmerBase,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                const Expanded(child: _SkeletonBox(width: double.infinity, height: 44)),
+                Expanded(
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: shimmerBase,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 10),
-                const Expanded(child: _SkeletonBox(width: double.infinity, height: 44)),
+                Expanded(
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: shimmerBase,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SkeletonBox extends StatelessWidget {
-  const _SkeletonBox({
-    required this.width,
-    required this.height,
-  });
-
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8EBF4),
-        borderRadius: BorderRadius.circular(6),
       ),
     );
   }
