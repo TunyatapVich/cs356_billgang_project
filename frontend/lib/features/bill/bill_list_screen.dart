@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'bill_provider.dart';
+import 'widgets/skeleton_loader.dart';
 
 class BillListScreen extends ConsumerStatefulWidget {
   const BillListScreen({super.key});
@@ -54,7 +55,7 @@ class _BillListScreenState extends ConsumerState<BillListScreen> {
         ],
       ),
       body: billState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SkeletonLoader(),
         error: (error, stackTrace) => _buildError(error),
         data: (bills) => _buildList(bills),
       ),

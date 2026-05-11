@@ -57,6 +57,9 @@ dependencies:
   # Image picker (camera + gallery for OCR)
   image_picker: ^1.1.2
 
+  # Loading skeleton
+  shimmer: ^3.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
