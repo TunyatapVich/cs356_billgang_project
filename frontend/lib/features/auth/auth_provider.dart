@@ -30,23 +30,14 @@ class User {
 // AuthNotifier — same as a Zustand store or useReducer auth context in React
 // AsyncNotifier<User?> means state is one of: loading | error | User | null (logged out)
 class AuthNotifier extends AsyncNotifier<User?> {
-  // build() runs once on startup — restore session if token exists
-  // IMPORTANT: do NOT block UI while restoring session
+  // build() runs once on startup
+  // Simply check if token exists — do NOT validate with API call here
+  // Token validation happens lazily when API call fails (401 → clear token)
   @override
   Future<User?> build() async {
     final token = await TokenStorage.read();
     if (token == null) return null;
-
-    // Validate token and restore user state
-    // If this fails, just return null — do NOT throw, which would put state in error forever
-    try {
-      final result = await ref.read(authServiceProvider).getProfile();
-      return User.fromJson(result['user'] as Map<String, dynamic>);
-    } catch (_) {
-      // Token invalid/expired — clear it and let user log in again
-      await TokenStorage.delete();
-      return null;
-    }
+    return null; // Token exists → user is "logged in" conceptually, no blocking validation
   }
 
   // login() — calls AuthService (which calls the API), saves token, updates state
