@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/socket/socket_client.dart';
 import 'bill_provider.dart';
 import 'bill_service.dart';
 
@@ -14,18 +16,27 @@ class EditBillScreen extends ConsumerStatefulWidget {
 }
 
 class _EditBillScreenState extends ConsumerState<EditBillScreen> {
-
   Bill? _bill;
   List<BillItem> _items = [];
   List<_Member> _members = [];
   int _selectedMemberIndex = 0;
   bool _loading = true;
   Object? _error;
+  String? _payerId; // real-time payer from socket
+  SocketClient? _socket;
+  StreamSubscription? _socketSub;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _socketSub?.cancel();
+    _socket?.disconnect();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -53,10 +64,62 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
 
       if (!mounted) return;
       setState(() => _loading = false);
+      _connectSocket(widget.billId);
     } catch (e) {
       if (!mounted) return;
       setState(() { _error = e; _loading = false; });
     }
+  }
+
+  void _connectSocket(String billId) {
+    _socketSub?.cancel();
+    _socket?.disconnect();
+    _socket = SocketClient();
+    _socket!.connect(billId, '');
+    _socket!.stream.listen(_handleSocketEvent);
+  }
+
+  void _handleSocketEvent(Map<String, dynamic> event) {
+    final type = event['type'] as String?;
+    final itemId = event['item_id'] as String?;
+    final userId = event['user_id'] as String?;
+    if (itemId == null || userId == null) return;
+    if (!mounted) return;
+
+    switch (type) {
+      case 'item_assigned':
+        _applyAssign(itemId, userId);
+        break;
+      case 'item_unassigned':
+        _applyUnassign(itemId, userId);
+        break;
+      case 'payer_set':
+        final newPayerId = event['paid_by'] as String?;
+        if (newPayerId != null) setState(() => _payerId = newPayerId);
+        break;
+    }
+  }
+
+  void _applyAssign(String itemId, String userId) {
+    setState(() {
+      _items = _items.map((item) {
+        if (item.id != itemId) return item;
+        final current = item.assignedTo ?? [];
+        if (current.contains(userId)) return item;
+        return item.copyWith(assignedTo: [...current, userId]);
+      }).toList();
+    });
+  }
+
+  void _applyUnassign(String itemId, String userId) {
+    setState(() {
+      _items = _items.map((item) {
+        if (item.id != itemId) return item;
+        final current = item.assignedTo ?? [];
+        if (!current.contains(userId)) return item;
+        return item.copyWith(assignedTo: current.where((id) => id != userId).toList());
+      }).toList();
+    });
   }
 
   void _toggleItem(int itemIndex) async {
@@ -94,11 +157,6 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.lineTotal);
 
-  String get _payerName {
-    if (_bill?.paidBy == null) return 'User';
-    final member = _members.where((m) => m.id == _bill!.paidBy).firstOrNull;
-    return member?.name ?? 'User';
-  }
   double get _service => _subtotal * ((_bill?.serviceChargePercent ?? 0) / 100);
   double get _vat => _subtotal * ((_bill?.vatPercent ?? 0) / 100);
   double get _total => _subtotal + _service + _vat;
@@ -119,16 +177,7 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
           _bill?.name ?? 'Edit Bill',
           style: const TextStyle(color: AppColors.textDark, fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        actions: [
-          if (!_loading && _error == null)
-            TextButton(
-              onPressed: () => context.go('/bill/${widget.billId}/summary'),
-              child: const Text(
-                'View Summary',
-                style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-            ),
-        ],
+        actions: const [],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -166,6 +215,8 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildPayerSection(),
+                const SizedBox(height: 12),
                 _buildBillHeader(),
                 const SizedBox(height: 16),
                 _buildMembersBar(),
@@ -179,6 +230,112 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
         ),
         _buildBottomBar(),
       ],
+    );
+  }
+
+  void _showPayerPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardWhite,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Who paid the bill?',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ..._members.map((m) {
+                final isSelected = m.id == (_payerId ?? _bill?.paidBy);
+                return ListTile(
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primaryBlue : AppColors.dimBlue,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(m.avatar, style: TextStyle(color: isSelected ? Colors.white : AppColors.primaryBlue, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  title: Text(m.name, style: TextStyle(
+                    color: isSelected ? AppColors.primaryBlue : AppColors.textDark,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  )),
+                  trailing: isSelected ? const Icon(Icons.check, color: AppColors.primaryBlue) : null,
+                  onTap: () {
+                    ref.read(billServiceProvider).setPayer(billId: widget.billId, payerId: m.id);
+                    setState(() => _payerId = m.id);
+                    Navigator.pop(ctx);
+                  },
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPayerSection() {
+    final effectivePayerId = _payerId ?? _bill?.paidBy;
+    final payer = effectivePayerId != null
+        ? _members.where((m) => m.id == effectivePayerId).firstOrNull
+        : null;
+    return GestureDetector(
+      onTap: _members.isEmpty ? null : _showPayerPicker,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3CD),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+              ),
+              child: const Icon(Icons.receipt, color: Colors.amber, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Paid by', style: TextStyle(color: AppColors.textGray, fontSize: 11)),
+                  const SizedBox(height: 2),
+                  Text(
+                    payer?.name ?? 'Tap to select',
+                    style: TextStyle(
+                      color: payer != null ? AppColors.textDark : AppColors.primaryBlue,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_members.isNotEmpty) Icon(Icons.chevron_right, color: AppColors.textGray, size: 20),
+          ],
+        ),
+      ),
     );
   }
 
@@ -530,10 +687,8 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              onPressed: _bill?.paidBy == null
-                  ? null
-                  : () => context.go('/bill/${widget.billId}/paid/${_bill!.paidBy}/${_total.toInt()}?amount=${_total.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}'),
-              child: Text(_bill?.paidBy == null ? 'No Payer Set' : 'Go to Pay', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              onPressed: _loading ? null : () => context.go('/bill/${widget.billId}/summary'),
+              child: const Text('View Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ),
           ),
         ],
