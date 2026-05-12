@@ -18,25 +18,29 @@ class PaymentService {
     required String toUserId,
     required double amount,
   }) async {
-    final response = await _dio.post('/payments', data: {
-      'bill_id': billId,
-      'from_user_id': fromUserId,
-      'to_user_id': toUserId,
-      'amount': amount,
-    });
+    final response = await _dio.post(
+      '/payments',
+      data: {
+        'bill_id': billId,
+        'from_user_id': fromUserId,
+        'to_user_id': toUserId,
+        'amount': amount,
+      },
+    );
     return response.data as Map<String, dynamic>;
   }
 
-  Future<void> confirm(String paymentId, {String? slipUrl}) async {
-    await _dio.put('/payments/$paymentId/confirm', data: {
-      if (slipUrl != null) 'slip_url': slipUrl,
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> getDebts(String billId) async {
-    final response = await _dio.get('/bills/$billId/debts');
-    final data = response.data as Map<String, dynamic>;
-    return (data['debts'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+  /// Confirms a payment. Returns the backend response including [bill_settled]
+  /// so the caller can show a 'Bill Closed' state if all payments are done.
+  Future<Map<String, dynamic>> confirm(
+    String paymentId, {
+    String? slipUrl,
+  }) async {
+    final response = await _dio.put(
+      '/payments/$paymentId/confirm',
+      data: {if (slipUrl != null) 'slip_url': slipUrl},
+    );
+    return response.data as Map<String, dynamic>;
   }
 }
 
@@ -56,10 +60,7 @@ Future<String> uploadSlipToCloudinary(Uint8List imageBytes) async {
   });
 
   try {
-    final response = await dio.post(
-      cloudinaryUploadUrl,
-      data: formData,
-    );
+    final response = await dio.post(cloudinaryUploadUrl, data: formData);
 
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) {

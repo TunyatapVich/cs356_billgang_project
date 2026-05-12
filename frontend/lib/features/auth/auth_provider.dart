@@ -49,10 +49,17 @@ class AuthNotifier extends AsyncNotifier<User?> {
     });
   }
 
-  Future<void> register(String email, String phone, String password, String passwordConfirm) async {
+  Future<void> register(
+    String email,
+    String phone,
+    String password,
+    String passwordConfirm,
+  ) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final data = await ref.read(authServiceProvider).register(email, phone, password, passwordConfirm);
+      final data = await ref
+          .read(authServiceProvider)
+          .register(email, phone, password, passwordConfirm);
       await TokenStorage.save(data['token']);
       return User.fromJson(data['user'] as Map<String, dynamic>);
     });
@@ -75,11 +82,13 @@ class AuthNotifier extends AsyncNotifier<User?> {
     String? avatarUrl,
     String? promptpayNumber,
   }) async {
-    final data = await ref.read(authServiceProvider).updateProfile(
-      displayName: displayName,
-      avatarUrl: avatarUrl,
-      promptpayNumber: promptpayNumber,
-    );
+    final data = await ref
+        .read(authServiceProvider)
+        .updateProfile(
+          displayName: displayName,
+          avatarUrl: avatarUrl,
+          promptpayNumber: promptpayNumber,
+        );
     final userJson = data['user'] as Map<String, dynamic>?;
     if (userJson != null) {
       state = AsyncData(User.fromJson(userJson));

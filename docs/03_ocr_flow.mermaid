@@ -1,8 +1,8 @@
 sequenceDiagram
-    participant UI as Flutter UI
+    participant UI as Flutter UI (OCR + Review Screen)
     participant MLKit as ML Kit (on-device)
     participant API as ElysiaJS API
-    participant LLM as LLM API
+    participant LLM as OpenAI API
     participant DB as Neon DB
 
     UI->>UI: open camera / gallery picker
@@ -10,15 +10,12 @@ sequenceDiagram
     Note over MLKit: runs locally on device<br/>no network needed
     MLKit-->>UI: raw OCR text (messy)
 
-    UI->>API: POST /bills/:id/ocr {raw_text, image_url}
+    UI->>API: POST /bills/:id/ocr { raw_text }
     API->>LLM: "parse this receipt text into [{name, qty, price}]"
     LLM-->>API: structured JSON items
-    API->>DB: UPDATE bills SET receipt_image_url
-    DB-->>API: ok
     API-->>UI: parsed items list
 
-    UI->>UI: show OCR Review Screen
-    Note over UI: user can edit name / price / qty<br/>or delete wrong items
+    UI->>UI: show editable item rows<br/>(user can edit name / price / qty or delete wrong items)
 
     UI->>API: POST /bills/:id/items (bulk array)
     API->>DB: INSERT bill_items (batch)

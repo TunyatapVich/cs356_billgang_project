@@ -20,7 +20,7 @@ import '../../features/splash/splash_screen.dart';
 /// whenever the auth state changes (loading → data/error).
 class RouterNotifier extends ChangeNotifier {
   RouterNotifier(Ref ref) {
-    ref.listen<AsyncValue<User?>>(authProvider, (_, __) {
+    ref.listen<AsyncValue<User?>>(authProvider, (prev, _) {
       notifyListeners();
     });
   }
@@ -37,28 +37,37 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final auth = ref.read(authProvider);
       final onSplash = state.matchedLocation == '/splash';
+      final isOnAuthPage =
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register';
 
-      // Still initialising → stay on splash
-      if (auth.isLoading) return onSplash ? null : '/splash';
+      if (auth.isLoading) {
+        // Cold-start: stay on splash while authProvider initialises
+        if (onSplash) return null;
+        // User is actively logging in / registering — don't interrupt them
+        if (isOnAuthPage) return null;
+        // Any other protected page — hold at splash until we know auth state
+        return '/splash';
+      }
 
       final isLoggedIn = auth.maybeWhen(
         data: (user) => user != null,
         orElse: () => false,
       );
-      final isOnAuthPage =
-          state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
 
-      // Finished loading: leave the splash screen
+      // Cold-start resolved: leave the splash screen
       if (onSplash) return isLoggedIn ? '/' : '/login';
 
-      // Normal guards
+      // Normal guards for every other navigation
       if (!isLoggedIn && !isOnAuthPage) return '/login';
       if (isLoggedIn && isOnAuthPage) return '/';
       return null;
     },
     routes: [
-      GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/register',
@@ -98,6 +107,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             InviteScreen(billId: state.pathParameters['id']!),
       ),
+      // GoRoute(path: '/bill/:id/assign', builder: (_, __) => const Placeholder()),
       GoRoute(path: '/join', builder: (context, state) => const JoinScreen()),
       GoRoute(
         path: '/bill/:id/paid/:toUserId/:amount',
@@ -105,7 +115,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           billId: state.pathParameters['id']!,
           toUserId: state.pathParameters['toUserId']!,
           toUserName: state.uri.queryParameters['name'] ?? 'Unknown',
-          amount: double.tryParse(state.uri.queryParameters['amount'] ?? '0') ?? 0,
+          amount:
+              double.tryParse(state.uri.queryParameters['amount'] ?? '0') ?? 0,
           rawAmount: state.uri.queryParameters['rawAmount'],
         ),
       ),

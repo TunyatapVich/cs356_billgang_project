@@ -58,6 +58,14 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           _bill = _bill?.copyWith(paidBy: newPayerId);
         });
       }
+    } else if (type == 'payment_confirmed') {
+      // Backend broadcasts bill_settled: true when all payments are confirmed
+      final billSettled = event['bill_settled'] as bool? ?? false;
+      if (billSettled && mounted) {
+        setState(() {
+          _bill = _bill?.copyWith(status: 'settled');
+        });
+      }
     } else if (type == 'bill_updated') {
       _loadBill();
     }
@@ -81,9 +89,18 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
 
       final bill = Bill.fromJson(billData['bill'] as Map<String, dynamic>);
       final rawItems = (billData['items'] as List<dynamic>?) ?? [];
-      final items = rawItems.cast<Map<String, dynamic>>().map(BillItem.fromJson).toList();
-      final members = (billData['members'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
-      final perPerson = (debtsData['per_person'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+      final items = rawItems
+          .cast<Map<String, dynamic>>()
+          .map(BillItem.fromJson)
+          .toList();
+      final members =
+          (billData['members'] as List<dynamic>?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
+      final perPerson =
+          (debtsData['per_person'] as List<dynamic>?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
 
       if (!mounted) return;
       setState(() {
@@ -104,7 +121,9 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
 
   String get _payerName {
     if (_bill?.paidBy == null) return 'User';
-    final member = _members.where((m) => m['user_id'] == _bill!.paidBy).firstOrNull;
+    final member = _members
+        .where((m) => m['user_id'] == _bill!.paidBy)
+        .firstOrNull;
     final user = member?['user'] as Map<String, dynamic>?;
     return (user?['display_name'] ?? user?['email'] ?? 'User') as String;
   }
@@ -138,8 +157,8 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildError()
-              : _buildContent(),
+          ? _buildError()
+          : _buildContent(),
     );
   }
 
@@ -150,10 +169,16 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
         children: [
           const Icon(Icons.error_outline, color: AppColors.errorRed, size: 42),
           const SizedBox(height: 12),
-          Text(_error.toString(), style: const TextStyle(color: AppColors.textGray)),
+          Text(
+            _error.toString(),
+            style: const TextStyle(color: AppColors.textGray),
+          ),
           const SizedBox(height: 16),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: Colors.white,
+            ),
             onPressed: _loadBill,
             child: const Text('Try Again'),
           ),
@@ -164,10 +189,13 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
 
   Widget _buildContent() {
     final bill = _bill!;
+    final isSettled = !bill.isActive;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(
         children: [
+          if (isSettled) _buildSettledBanner(),
+          if (isSettled) const SizedBox(height: 16),
           _buildMemberRow(bill),
           const SizedBox(height: 16),
           _buildBillCard(bill),
@@ -175,6 +203,50 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           _buildPersonSplit(),
           const SizedBox(height: 20),
           _buildPayButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettledBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColors.successGreen.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.successGreen.withValues(alpha: 0.35),
+        ),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.successGreen,
+            size: 28,
+          ),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'บิลนี้ชำระครบแล้ว',
+                  style: TextStyle(
+                    color: AppColors.successGreen,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'All payments have been confirmed',
+                  style: TextStyle(color: AppColors.successGreen, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -245,7 +317,10 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                   const Spacer(),
                   Text(
                     '${_items.length} item${_items.length == 1 ? '' : 's'}',
-                    style: const TextStyle(color: AppColors.textGray, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppColors.textGray,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -254,28 +329,40 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Column(
                 children: [
-                  ..._items.map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.name,
-                            style: const TextStyle(color: AppColors.textDark, fontSize: 13),
+                  ..._items.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              style: const TextStyle(
+                                color: AppColors.textDark,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
-                        ),
-                        Text(
-                          'x${item.quantity}',
-                          style: const TextStyle(color: AppColors.textGray, fontSize: 12),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          '฿${item.lineTotal.toStringAsFixed(2)}',
-                          style: const TextStyle(color: AppColors.textDark, fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                      ],
+                          Text(
+                            'x${item.quantity}',
+                            style: const TextStyle(
+                              color: AppColors.textGray,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '฿${item.lineTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: AppColors.textDark,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
                   _buildDashedDivider(),
                 ],
               ),
@@ -288,9 +375,17 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
               children: [
                 _buildTotalRow('Subtotal', _subtotal, isBold: false),
                 const SizedBox(height: 6),
-                _buildTotalRow('Service ${bill.serviceChargePercent ?? 0}%', _service, isBold: false),
+                _buildTotalRow(
+                  'Service ${bill.serviceChargePercent ?? 0}%',
+                  _service,
+                  isBold: false,
+                ),
                 const SizedBox(height: 6),
-                _buildTotalRow('VAT ${bill.vatPercent ?? 0}%', _vat, isBold: false),
+                _buildTotalRow(
+                  'VAT ${bill.vatPercent ?? 0}%',
+                  _vat,
+                  isBold: false,
+                ),
                 const SizedBox(height: 12),
                 _buildDashedDivider(),
                 const SizedBox(height: 12),
@@ -325,7 +420,12 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     );
   }
 
-  Widget _buildTotalRow(String label, double amount, {bool isBold = false, bool isTotal = false}) {
+  Widget _buildTotalRow(
+    String label,
+    double amount, {
+    bool isBold = false,
+    bool isTotal = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -370,16 +470,27 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
         children: [
           const Text(
             'Per Person',
-            style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: AppColors.textDark,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 16),
           if (_perPerson.isEmpty)
-            const Text('No assignments yet', style: TextStyle(color: AppColors.textGray, fontSize: 14))
+            const Text(
+              'No assignments yet',
+              style: TextStyle(color: AppColors.textGray, fontSize: 14),
+            )
           else
             ..._perPerson.map((p) {
               final user = p['user'] as Map<String, dynamic>? ?? {};
-              final displayName = (user['display_name'] ?? user['email'] ?? 'Unknown') as String;
-              final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+              final displayName =
+                  (user['display_name'] ?? user['email'] ?? 'Unknown')
+                      as String;
+              final initial = displayName.isNotEmpty
+                  ? displayName[0].toUpperCase()
+                  : 'U';
               final owed = (p['owed'] as num?)?.toDouble() ?? 0.0;
               final isMe = p['user_id'] == currentUserId;
               return Padding(
@@ -392,7 +503,11 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                       decoration: BoxDecoration(
                         color: isMe ? AppColors.primaryBlue : AppColors.dimBlue,
                         shape: BoxShape.circle,
-                        border: Border.all(color: isMe ? AppColors.primaryBlue : AppColors.inputBorder),
+                        border: Border.all(
+                          color: isMe
+                              ? AppColors.primaryBlue
+                              : AppColors.inputBorder,
+                        ),
                       ),
                       child: Center(
                         child: Text(
@@ -412,13 +527,19 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                         style: TextStyle(
                           color: AppColors.textDark,
                           fontSize: 14,
-                          fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isMe
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                     ),
                     Text(
                       '฿${owed.toStringAsFixed(2)}',
-                      style: const TextStyle(color: AppColors.primaryBlue, fontSize: 14, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: AppColors.primaryBlue,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -428,10 +549,21 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total', style: TextStyle(color: AppColors.textDark, fontSize: 15, fontWeight: FontWeight.bold)),
+              const Text(
+                'Total',
+                style: TextStyle(
+                  color: AppColors.textDark,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               Text(
                 '฿${_total.toStringAsFixed(2)}',
-                style: const TextStyle(color: AppColors.primaryBlue, fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: AppColors.primaryBlue,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -440,16 +572,55 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     );
   }
 
-
   double get _myOwedAmount {
     final currentUserId = ref.read(authProvider).value?.id;
     if (currentUserId == null || _perPerson.isEmpty) return _total;
-    final mine = _perPerson.where((p) => p['user_id'] == currentUserId).firstOrNull;
+    final mine = _perPerson
+        .where((p) => p['user_id'] == currentUserId)
+        .firstOrNull;
     return (mine?['owed'] as num?)?.toDouble() ?? 0.0;
   }
 
   Widget _buildPayButton() {
-    final payerId = _bill?.paidBy;
+    final bill = _bill!;
+    final isSettled = !bill.isActive;
+
+    // ── Settled state — no payment action needed ────────────────────────────
+    if (isSettled) {
+      return Container(
+        width: double.infinity,
+        height: 52,
+        decoration: BoxDecoration(
+          color: AppColors.successGreen.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.successGreen.withValues(alpha: 0.4),
+          ),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.check_circle_rounded,
+              color: AppColors.successGreen,
+              size: 20,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'บิลนี้ชำระครบแล้ว',
+              style: TextStyle(
+                color: AppColors.successGreen,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── Active bill — normal pay logic ─────────────────────────────────────
+    final payerId = bill.paidBy;
     final currentUserId = ref.read(authProvider).value?.id;
     final isCurrentUserPayer = payerId != null && payerId == currentUserId;
     final myOwed = _myOwedAmount;
@@ -474,18 +645,38 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           backgroundColor: canPay ? AppColors.primaryBlue : AppColors.textGray,
           foregroundColor: Colors.white,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
         onPressed: canPay
-            ? () => context.go('/bill/${widget.billId}/paid/$payerId/${myOwed.toInt()}?amount=${myOwed.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}&rawAmount=${myOwed.toStringAsFixed(2)}')
+            ? () => context.go(
+                '/bill/${widget.billId}/paid/$payerId/${myOwed.toInt()}?amount=${myOwed.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}&rawAmount=${myOwed.toStringAsFixed(2)}',
+              )
             : null,
-        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        child: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
       ),
     );
   }
 
   String _formatDate(DateTime date) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

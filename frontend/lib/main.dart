@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 
-Future<void> main() async {
-  await dotenv.load(fileName: '.env');
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+void main() {
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
