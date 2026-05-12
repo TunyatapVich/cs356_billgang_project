@@ -14,6 +14,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _displayNameController = TextEditingController();
   final _promptpayController = TextEditingController();
   String? _errorMessage;
+  bool _controllersInitialized = false;
 
   static const primaryBlue = Color(0xFF4E54C8);
   static const bgLight = Color(0xFFF6F8FD);
@@ -28,7 +29,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Controllers start empty, will be populated once on first build
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_controllersInitialized) {
+      final authState = ref.watch(authProvider);
+      authState.whenData((user) {
+        if (user != null) {
+          _displayNameController.text = user.displayName ?? '';
+          _promptpayController.text = user.promptpayNumber ?? '';
+          _controllersInitialized = true;
+        }
+      });
+    }
   }
 
   @override
@@ -79,15 +94,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authProvider).isLoading;
-    final authState = ref.watch(authProvider);
-
-    // Populate controllers ONCE on first build when user data is available
-    authState.whenData((user) {
-      if (user != null && _displayNameController.text.isEmpty && _promptpayController.text.isEmpty) {
-        _displayNameController.text = user.displayName ?? '';
-        _promptpayController.text = user.promptpayNumber ?? '';
-      }
-    });
 
     return Scaffold(
       backgroundColor: bgLight,
