@@ -80,7 +80,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     final authState = ref.read(authProvider);
     authState.when(
       data: (user) {
-        if (user != null) context.go('/bills');
+        if (user != null) context.go('/');
       },
       error: (e, _) => setState(() => _errorMessage = e.toString()),
       loading: () {},
@@ -98,7 +98,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: textDark),
-          onPressed: () => context.go('/bills'),
+          onPressed: () => context.go('/'),
         ),
         title: const Text(
           'Profile',

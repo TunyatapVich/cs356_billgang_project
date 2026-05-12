@@ -91,7 +91,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
     final billId = GoRouterState.of(context).pathParameters['id'];
 
     if (billId == null || billId.isEmpty) {
-      context.go('/bills');
+      context.go('/');
       return;
     }
 
@@ -370,7 +370,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
               _buildNavItem(
                 icon: Icons.home_outlined,
                 label: 'Home',
-                onTap: () => context.go('/bills'),
+                onTap: () => context.go('/'),
               ),
               _buildNavItem(
                 icon: Icons.group_add,

@@ -68,7 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.read(authProvider);
     authState.when(
       data: (user) {
-        if (user != null) context.go('/bills');
+        if (user != null) context.go('/');
       },
       error: (e, _) => setState(() => _errorMessage = e.toString()),
       loading: () {},

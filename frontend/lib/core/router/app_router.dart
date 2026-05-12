@@ -2,7 +2,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/register_screen.dart';
 import '../../features/profile/profile_screen.dart';
-import '../../features/bill/bill_list_screen.dart';
+import '../../features/home/home_screen.dart';
 import '../../features/bill/create_bill_screen.dart';
 import '../../features/bill/add_items_screen.dart';
 import '../../features/bill/ocr_review_screen.dart';
@@ -18,8 +18,12 @@ final appRouter = GoRouter(
       builder: (context, state) => const RegisterScreen(),
     ),
     GoRoute(
+      path: '/',
+      builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
       path: '/bills',
-      builder: (context, state) => const BillListScreen(),
+      builder: (context, state) => const HomeScreen(),
     ),
     GoRoute(
       path: '/bill/create',

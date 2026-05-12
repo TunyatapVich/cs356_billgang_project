@@ -92,7 +92,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: primaryBlue),
-          onPressed: () => context.go('/bills'),
+          onPressed: () => context.go('/'),
         ),
         title: const Text(
           'Add Items',

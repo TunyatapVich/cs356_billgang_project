@@ -83,7 +83,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Profile updated')),
           );
-          context.go('/bills');
+          context.go('/');
         }
       },
       error: (e, _) => setState(() => _errorMessage = e.toString()),
@@ -102,7 +102,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: textDark),
-          onPressed: () => context.go('/bills'),
+          onPressed: () => context.go('/'),
         ),
         title: const Text(
           'Profile',

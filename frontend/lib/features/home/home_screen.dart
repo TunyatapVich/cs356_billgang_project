@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'bill_provider.dart';
-import 'widgets/skeleton_loader.dart';
+import '../bill/bill_provider.dart';
+import '../bill/widgets/skeleton_loader.dart';
 
-class BillListScreen extends ConsumerStatefulWidget {
-  const BillListScreen({super.key});
+class HomeScreen extends ConsumerStatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  ConsumerState<BillListScreen> createState() => _BillListScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _BillListScreenState extends ConsumerState<BillListScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   static const primaryBlue = Color(0xFF4E54C8);
   static const bgLight = Color(0xFFF6F8FD);
   static const cardWhite = Colors.white;
@@ -293,11 +293,11 @@ class _BillCard extends StatelessWidget {
 
   final Bill bill;
 
-  static const primaryBlue = _BillListScreenState.primaryBlue;
-  static const cardWhite = _BillListScreenState.cardWhite;
-  static const textDark = _BillListScreenState.textDark;
-  static const textGray = _BillListScreenState.textGray;
-  static const inputFill = _BillListScreenState.inputFill;
+  static const primaryBlue = _HomeScreenState.primaryBlue;
+  static const cardWhite = _HomeScreenState.cardWhite;
+  static const textDark = _HomeScreenState.textDark;
+  static const textGray = _HomeScreenState.textGray;
+  static const inputFill = _HomeScreenState.inputFill;
 
   @override
   Widget build(BuildContext context) {
