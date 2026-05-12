@@ -76,7 +76,7 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
     _socket?.disconnect();
     _socket = SocketClient();
     _socket!.connect(billId, '');
-    _socket!.stream.listen(_handleSocketEvent);
+    _socketSub = _socket!.stream.listen(_handleSocketEvent);
   }
 
   void _handleSocketEvent(Map<String, dynamic> event) {
@@ -177,7 +177,29 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
           _bill?.name ?? 'Edit Bill',
           style: const TextStyle(color: AppColors.textDark, fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        actions: const [],
+        actions: [
+          if (_bill != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _bill!.isActive
+                      ? const Color(0xFF34C759).withValues(alpha: 0.12)
+                      : AppColors.textGray.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _bill!.isActive ? 'Active' : 'Settled',
+                  style: TextStyle(
+                    color: _bill!.isActive ? const Color(0xFF34C759) : AppColors.textGray,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -216,8 +238,6 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildPayerSection(),
-                const SizedBox(height: 12),
-                _buildBillHeader(),
                 const SizedBox(height: 16),
                 _buildMembersBar(),
                 const SizedBox(height: 16),
@@ -335,64 +355,6 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
             if (_members.isNotEmpty) Icon(Icons.chevron_right, color: AppColors.textGray, size: 20),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildBillHeader() {
-    final bill = _bill!;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.dimBlue,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  bill.name,
-                  style: const TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_members.length} member${_members.length == 1 ? '' : 's'}  ·  ${_formatDate(bill.date)}',
-                  style: const TextStyle(color: AppColors.textGray, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: bill.isActive
-                  ? const Color(0xFF34C759).withValues(alpha: 0.1)
-                  : AppColors.textGray.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              bill.isActive ? 'Active' : 'Settled',
-              style: TextStyle(
-                color: bill.isActive ? const Color(0xFF34C759) : AppColors.textGray,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -696,10 +658,6 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
 }
 
 class _Member {
