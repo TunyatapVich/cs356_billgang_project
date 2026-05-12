@@ -18,29 +18,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _displayNameController = TextEditingController();
   final _promptpayController = TextEditingController();
   String? _errorMessage;
-  bool _controllersInitialized = false;
   bool _isEditing = false;
   String? _displayNameError;
-  String? _promptpayError;
 
   @override
   void initState() {
     super.initState();
+    Future.microtask(_initControllers);
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_controllersInitialized) {
-      final authState = ref.watch(authProvider);
-      authState.whenData((user) {
-        if (user != null) {
-          _displayNameController.text = user.displayName ?? '';
-          _promptpayController.text = user.promptpayNumber ?? '';
-          _controllersInitialized = true;
-        }
-      });
-    }
+  void _initControllers() {
+    final authState = ref.read(authProvider);
+    authState.whenData((user) {
+      if (user != null) {
+        _displayNameController.text = user.displayName ?? '';
+        _promptpayController.text = user.promptpayNumber ?? '';
+      }
+    });
   }
 
   @override
@@ -51,19 +45,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   bool _validate() {
-    bool valid = true;
-    setState(() {
-      _displayNameError = null;
-      _promptpayError = null;
-    });
-
+    setState(() => _displayNameError = null);
     final displayName = _displayNameController.text.trim();
     if (displayName.isEmpty) {
       setState(() => _displayNameError = 'Display name is required');
-      valid = false;
+      return false;
     }
-
-    return valid;
+    return true;
   }
 
   Future<void> _submit() async {
@@ -150,7 +138,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   prefixIcon: Icons.phone_android_outlined,
                   keyboardType: TextInputType.phone,
                   readOnly: !_isEditing,
-                  errorText: _promptpayError,
                 ),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 12),
