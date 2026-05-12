@@ -71,6 +71,13 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = const AsyncData(null);
   }
 
+  Future<void> refresh() async {
+    state = await AsyncValue.guard(() async {
+      final data = await ref.read(authServiceProvider).getProfile();
+      return User.fromJson(data['user'] as Map<String, dynamic>);
+    });
+  }
+
   Future<void> updateProfile({
     String? displayName,
     String? avatarUrl,

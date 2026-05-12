@@ -49,6 +49,11 @@ class AuthService {
     );
     return response.data as Map<String, dynamic>;
   }
+
+  Future<Map<String, dynamic>> getProfile() async {
+    final response = await _dio.get('/auth/profile');
+    return response.data as Map<String, dynamic>;
+  }
 }
 
 final authServiceProvider = Provider<AuthService>((ref) {
