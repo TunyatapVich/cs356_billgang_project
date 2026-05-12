@@ -377,8 +377,9 @@ class OcrNotifier extends Notifier<OcrState> {
     state = const OcrState(status: OcrScanStatus.scanning);
     final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
-      final recognised =
-          await recognizer.processImage(InputImage.fromFile(imageFile));
+      final recognised = await recognizer.processImage(
+        InputImage.fromFile(imageFile),
+      );
       final rawText = recognised.text;
 
       if (rawText.trim().isEmpty) {
@@ -402,5 +403,6 @@ class OcrNotifier extends Notifier<OcrState> {
   }
 }
 
-final ocrProvider =
-    NotifierProvider.autoDispose<OcrNotifier, OcrState>(OcrNotifier.new);
+final ocrProvider = NotifierProvider.autoDispose<OcrNotifier, OcrState>(
+  OcrNotifier.new,
+);

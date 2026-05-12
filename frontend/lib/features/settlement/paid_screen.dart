@@ -221,9 +221,19 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     }
 
     final generator = ThaiQRGenerator();
+    String cleanPromptPay = _promptpayNumber!.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanPromptPay.startsWith('0') && cleanPromptPay.length == 10) {
+      cleanPromptPay = '0066${cleanPromptPay.substring(1)}';
+    }
+
+    final amountDouble =
+        double.tryParse(widget.rawAmount ?? widget.amount.toStringAsFixed(2)) ??
+        widget.amount.toDouble();
+    final amountString = amountDouble.toStringAsFixed(2);
+
     final qrPayload = generator.generateCodeFromMobileOrId(
-      _promptpayNumber!,
-      widget.rawAmount ?? widget.amount.toStringAsFixed(2),
+      cleanPromptPay,
+      amountString,
     );
 
     return Column(
