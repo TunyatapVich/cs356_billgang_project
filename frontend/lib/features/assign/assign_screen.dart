@@ -102,128 +102,66 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
         ? assignState.members.where((m) => m.id == assignState.payerId).firstOrNull
         : null;
 
-    return GestureDetector(
-      onTap: () => _showPayerPicker(assignState),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.cardWhite,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.inputBorder),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF3CD),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
-              ),
-              child: const Icon(Icons.receipt, color: Colors.amber, size: 20),
+    return DragTarget<Map<String, dynamic>>(
+      onWillAcceptWithDetails: (_) => true,
+      onAcceptWithDetails: (details) {
+        final memberId = details.data['id'] as String;
+        ref.read(assignProvider.notifier).setPayer(widget.billId, memberId);
+      },
+      builder: (context, candidateData, rejectedData) {
+        final isHovering = candidateData.isNotEmpty;
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isHovering ? const Color(0xFFFFF3CD) : AppColors.cardWhite,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isHovering ? Colors.amber : AppColors.inputBorder,
+              width: isHovering ? 2 : 1,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Paid by',
-                    style: TextStyle(color: AppColors.textGray, fontSize: 11),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    payer?.name ?? 'Tap to set who paid',
-                    style: TextStyle(
-                      color: payer != null ? AppColors.textDark : AppColors.primaryBlue,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.edit, color: AppColors.textGray, size: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showPayerPicker(AssignState assignState) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.cardWhite,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          ),
+          child: Row(
             children: [
-              const SizedBox(height: 16),
               Container(
                 width: 40,
-                height: 4,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.inputBorder,
-                  borderRadius: BorderRadius.circular(2),
+                  color: const Color(0xFFFFF3CD),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
                 ),
+                child: const Icon(Icons.receipt, color: Colors.amber, size: 20),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Who paid the bill?',
-                style: TextStyle(
-                  color: AppColors.textDark,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...assignState.members.map((m) {
-                final isSelected = m.id == assignState.payerId;
-                return ListTile(
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.dimBlue : const Color(0xFFF2F4FC),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isSelected ? AppColors.primaryBlue : AppColors.inputBorder,
-                        width: isSelected ? 2 : 1,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isHovering ? 'Drop to set payer' : 'Paid by',
+                      style: TextStyle(
+                        color: isHovering ? Colors.amber.shade700 : AppColors.textGray,
+                        fontSize: 11,
                       ),
                     ),
-                    child: Center(
-                      child: Text(
-                        m.avatar,
-                        style: TextStyle(
-                          color: isSelected ? AppColors.primaryBlue : AppColors.textGray,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      payer?.name ?? 'Drag member here',
+                      style: TextStyle(
+                        color: payer != null ? AppColors.textDark : AppColors.primaryBlue,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                  title: Text(
-                    m.name,
-                    style: TextStyle(
-                      color: isSelected ? AppColors.primaryBlue : AppColors.textDark,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  trailing: isSelected
-                      ? const Icon(Icons.check_circle, color: AppColors.primaryBlue)
-                      : null,
-                  onTap: () {
-                    ref.read(assignProvider.notifier).setPayer(widget.billId, m.id);
-                    Navigator.pop(ctx);
-                  },
-                );
-              }),
-              const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.drag_indicator,
+                color: isHovering ? Colors.amber : AppColors.textGray,
+                size: 20,
+              ),
             ],
           ),
         );
@@ -245,53 +183,100 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
           children: List.generate(assignState.members.length, (i) {
             final m = assignState.members[i];
             final sel = i == assignState.selectedMemberIndex;
-            return GestureDetector(
-              onTap: () =>
-                  ref.read(assignProvider.notifier).selectMember(i),
-              child: Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Column(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: sel ? AppColors.dimBlue : const Color(0xFFF2F4FC),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color:
-                              sel ? AppColors.primaryBlue : AppColors.inputBorder,
-                          width: sel ? 2.5 : 1,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          m.avatar,
-                          style: TextStyle(
-                            color:
-                                sel ? AppColors.primaryBlue : AppColors.textGray,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      m.name,
-                      style: TextStyle(
-                        color: sel ? AppColors.primaryBlue : AppColors.textGray,
-                        fontSize: 12,
-                        fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ],
+            final isPayer = m.id == assignState.payerId;
+            return LongPressDraggable<Map<String, dynamic>>(
+              data: {'id': m.id, 'name': m.name, 'avatar': m.avatar},
+              feedback: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.dimBlue,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primaryBlue, width: 2.5),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(m.avatar, style: const TextStyle(color: AppColors.primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
                 ),
+              ),
+              childWhenDragging: Opacity(
+                opacity: 0.4,
+                child: _memberAvatar(m, sel, isPayer),
+              ),
+              onDragStarted: () => ref.read(assignProvider.notifier).selectMember(i),
+              child: GestureDetector(
+                onTap: () => ref.read(assignProvider.notifier).selectMember(i),
+                child: _memberAvatar(m, sel, isPayer),
               ),
             );
           }),
         ),
+      ),
+    );
+  }
+
+  Widget _memberAvatar(AssignMember m, bool sel, bool isPayer) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: sel ? AppColors.dimBlue : const Color(0xFFF2F4FC),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isPayer ? Colors.amber : (sel ? AppColors.primaryBlue : AppColors.inputBorder),
+                    width: isPayer ? 2.5 : (sel ? 2.5 : 1),
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    m.avatar,
+                    style: TextStyle(
+                      color: sel ? AppColors.primaryBlue : AppColors.textGray,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              if (isPayer)
+                Positioned(
+                  right: -2,
+                  top: -2,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(
+                      color: Colors.amber,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.star, color: Colors.white, size: 12),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            m.name,
+            style: TextStyle(
+              color: sel ? AppColors.primaryBlue : AppColors.textGray,
+              fontSize: 12,
+              fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
       ),
     );
   }
