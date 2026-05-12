@@ -26,11 +26,8 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
   final _vatController = TextEditingController(text: '7');
 
   DateTime _date = DateTime.now();
-  String? _formError;
-  String? _nameError;
-  String? _serviceError;
-  String? _vatError;
   bool _submitting = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -50,46 +47,36 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
     if (picked != null) setState(() => _date = picked);
   }
 
-  bool _validate() {
-    String? nameErr;
-    String? svcErr;
-    String? vatErr;
-
-    if (_nameController.text.trim().isEmpty) {
-      nameErr = 'Bill name is required';
-    }
-    final svc = double.tryParse(_serviceController.text.trim());
-    if (svc == null || svc < 0) {
-      svcErr = 'Enter a number ≥ 0';
-    }
-    final vat = double.tryParse(_vatController.text.trim());
-    if (vat == null || vat < 0) {
-      vatErr = 'Enter a number ≥ 0';
-    }
-
-    setState(() {
-      _nameError = nameErr;
-      _serviceError = svcErr;
-      _vatError = vatErr;
-    });
-
-    return nameErr == null && svcErr == null && vatErr == null;
-  }
+  static final _decimalFormatter = FilteringTextInputFormatter.allow(
+    RegExp(r'^\d*\.?\d{0,2}'),
+  );
 
   Future<void> _submit() async {
     if (_submitting) return;
-    if (!_validate()) return;
+
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Bill name is required');
+      return;
+    }
+
+    final service = double.tryParse(_serviceController.text.trim());
+    final vat = double.tryParse(_vatController.text.trim());
+    if (service == null || service < 0 || vat == null || vat < 0) {
+      setState(() => _error = 'Enter valid numbers for service and VAT');
+      return;
+    }
 
     setState(() {
       _submitting = true;
-      _formError = null;
+      _error = null;
     });
 
     await ref.read(billProvider.notifier).createBill(
-          name: _nameController.text.trim(),
+          name: name,
           date: _date,
-          vatPercent: double.parse(_vatController.text.trim()),
-          serviceChargePercent: double.parse(_serviceController.text.trim()),
+          vatPercent: vat,
+          serviceChargePercent: service,
         );
 
     if (!mounted) return;
@@ -102,7 +89,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
           context.go('/bill/${bill.id}/items');
         }
       },
-      error: (e, _) => setState(() => _formError = e.toString()),
+      error: (e, _) => setState(() => _error = e.toString()),
       loading: () {},
     );
 
@@ -119,206 +106,139 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: primaryBlue),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.go('/'),
         ),
         title: const Text(
-          'New Bill',
+          'Create Bill',
           style: TextStyle(
             color: textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: textDark),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildStepper(),
-            const SizedBox(height: 30),
-            _buildBillDetailsCard(),
-            const SizedBox(height: 20),
-            _buildBottomInfoCards(),
-            const SizedBox(height: 30),
-            if (_formError != null) ...[
-              Text(
-                _formError!,
-                style: const TextStyle(color: errorRed, fontSize: 12),
-                textAlign: TextAlign.center,
+            _buildHero(),
+            const SizedBox(height: 24),
+            const Text(
+              'New Bill',
+              style: TextStyle(
+                color: textDark,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 12),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Enter bill details to get started.',
+              style: TextStyle(color: textGray, fontSize: 16, height: 1.4),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            _buildInputCard(),
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              _buildError(_error!),
             ],
+            const SizedBox(height: 24),
             _buildCreateButton(),
-            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStepper() {
+  Widget _buildHero() {
     return Stack(
-      alignment: Alignment.center,
+      clipBehavior: Clip.none,
       children: [
-        const Positioned(
-          top: 20,
-          left: 40,
-          right: 40,
-          child: SizedBox(height: 2, child: ColoredBox(color: inputFill)),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildStepItem(icon: Icons.edit, label: 'Create', isActive: true),
-            _buildStepItem(
-              icon: Icons.group_add_outlined,
-              label: 'Split',
-              isActive: false,
-            ),
-            _buildStepItem(
-              icon: Icons.check_circle_outline,
-              label: 'Finish',
-              isActive: false,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepItem({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-  }) {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 22,
-          backgroundColor: isActive ? primaryBlue : inputFill,
-          child: Icon(
-            icon,
-            color: isActive ? Colors.white : textGray,
-            size: 20,
+        Container(
+          width: 120,
+          height: 120,
+          decoration: const BoxDecoration(
+            color: Color(0xFFE4E6FF),
+            shape: BoxShape.circle,
           ),
+          child: const Icon(Icons.receipt_long, color: primaryBlue, size: 56),
         ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            color: isActive ? primaryBlue : textGray,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            fontSize: 12,
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: primaryBlue,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: primaryBlue.withValues(alpha: 0.24),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.add, color: Colors.white, size: 20),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildBillDetailsCard() {
+  Widget _buildInputCard() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: cardWhite,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: inputBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE4E6FF),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.receipt_long, color: primaryBlue),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Bill Details',
-                      style: TextStyle(
-                        color: textDark,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Enter the information for the new bill.',
-                      style: TextStyle(
-                        color: textGray,
-                        fontSize: 13,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildInputField(
+          _buildTextField(
+            controller: _nameController,
             label: 'Bill Name',
             hint: "Dinner at Joe's",
-            controller: _nameController,
-            errorText: _nameError,
           ),
           const SizedBox(height: 16),
-          _buildInputField(
+          _buildTextField(
+            controller: null,
             label: 'Date',
             hint: _formatDate(_date),
-            prefixIcon: Icons.calendar_today_outlined,
-            hintColor: textDark,
             readOnly: true,
             onTap: _pickDate,
+            prefixIcon: Icons.calendar_today_outlined,
           ),
           const SizedBox(height: 16),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _buildInputField(
-                  label: 'Service Charge (%)',
-                  hint: '10',
+                child: _buildTextField(
                   controller: _serviceController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  label: 'Service (%)',
+                  hint: '0',
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [_decimalFormatter],
-                  errorText: _serviceError,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildInputField(
+                child: _buildTextField(
+                  controller: _vatController,
                   label: 'VAT (%)',
                   hint: '7',
-                  controller: _vatController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [_decimalFormatter],
-                  errorText: _vatError,
                 ),
               ),
             ],
@@ -328,23 +248,16 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
     );
   }
 
-  static final _decimalFormatter = FilteringTextInputFormatter.allow(
-    RegExp(r'^\d*\.?\d{0,2}'),
-  );
-
-  Widget _buildInputField({
+  Widget _buildTextField({
+    required TextEditingController? controller,
     required String label,
     required String hint,
-    TextEditingController? controller,
-    IconData? prefixIcon,
-    Color? hintColor,
     bool readOnly = false,
     VoidCallback? onTap,
+    IconData? prefixIcon,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
-    String? errorText,
   }) {
-    final isError = errorText != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -358,11 +271,11 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
         ),
         const SizedBox(height: 8),
         Container(
-          height: 52,
+          height: 48,
           decoration: BoxDecoration(
             color: inputFill,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isError ? errorRed : inputBorder),
+            border: Border.all(color: inputBorder),
           ),
           child: TextField(
             controller: controller,
@@ -372,148 +285,31 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
             inputFormatters: inputFormatters,
             decoration: InputDecoration(
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               hintText: hint,
               hintStyle: TextStyle(
-                color: hintColor ?? textGray.withValues(alpha: 0.5),
-                fontSize: 15,
-                fontWeight: hintColor != null
-                    ? FontWeight.w600
-                    : FontWeight.normal,
+                color: textGray.withValues(alpha: 0.5),
+                fontSize: 14,
               ),
               prefixIcon: prefixIcon != null
-                  ? Icon(prefixIcon, color: textGray, size: 20)
+                  ? Icon(prefixIcon, color: textGray, size: 18)
                   : null,
             ),
           ),
         ),
-        if (isError) ...[
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(Icons.error_outline, color: errorRed, size: 14),
-              const SizedBox(width: 4),
-              Text(
-                errorText,
-                style: const TextStyle(color: errorRed, fontSize: 11),
-              ),
-            ],
-          ),
-        ],
       ],
-    );
-  }
-
-  Widget _buildBottomInfoCards() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F5FE),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Total Accuracy',
-                  style: TextStyle(color: Color(0x884E54C8), fontSize: 13),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '99.9%',
-                  style: TextStyle(
-                    color: primaryBlue,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            decoration: BoxDecoration(
-              color: cardWhite,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _buildAvatar(Colors.blue[100]!),
-                    Transform.translate(
-                      offset: const Offset(-8, 0),
-                      child: _buildAvatar(Colors.pink[100]!),
-                    ),
-                    Transform.translate(
-                      offset: const Offset(-16, 0),
-                      child: const CircleAvatar(
-                        radius: 12,
-                        backgroundColor: Color(0xFFE4E6FF),
-                        child: Text(
-                          '+6',
-                          style: TextStyle(
-                            color: primaryBlue,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Recent Splits',
-                  style: TextStyle(color: textGray, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAvatar(Color color) {
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
-      ),
     );
   }
 
   Widget _buildCreateButton() {
     return SizedBox(
       width: double.infinity,
-      height: 56,
+      height: 52,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 0,
         ),
         onPressed: _submitting ? null : _submit,
@@ -523,43 +319,42 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                 height: 22,
                 child: CircularProgressIndicator(
                   color: Colors.white,
-                  strokeWidth: 2.4,
+                  strokeWidth: 2.5,
                 ),
               )
-            : const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Create Bill',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Icon(Icons.arrow_forward, color: Colors.white, size: 20),
-                ],
+            : const Text(
+                'Create Bill',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
       ),
     );
   }
 
+  Widget _buildError(Object error) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: errorRed.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: errorRed.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: errorRed, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              error.toString(),
+              style: const TextStyle(color: errorRed, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }
