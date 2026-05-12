@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../bill/bill_provider.dart';
+import '../bill/bill_service.dart';
 import '../bill/widgets/skeleton_loader.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -169,7 +170,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
       itemCount: bills.length,
-      itemBuilder: (context, index) => _BillCard(bill: bills[index]),
+      itemBuilder: (context, index) => _BillCard(
+        bill: bills[index],
+        onDelete: () async {
+          await ref.read(billServiceProvider).deleteBill(bills[index].id);
+          ref.read(billListProvider.notifier).refreshBills();
+        },
+      ),
     );
   }
 
@@ -329,14 +336,16 @@ class _SheetOption extends StatelessWidget {
 }
 
 class _BillCard extends StatelessWidget {
-  const _BillCard({required this.bill});
+  const _BillCard({required this.bill, required this.onDelete});
 
   final Bill bill;
+  final VoidCallback onDelete;
 
   static const primaryBlue = Color(0xFF4E54C8);
   static const cardWhite = Colors.white;
   static const textDark = Color(0xFF2C3246);
   static const textGray = Color(0xFF8E95A9);
+  static const errorRed = Color(0xFFE84545);
 
   @override
   Widget build(BuildContext context) {
@@ -401,8 +410,21 @@ class _BillCard extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: textGray, size: 22),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: textGray, size: 20),
+                  padding: EdgeInsets.zero,
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      context.go('/bill/${bill.id}/items');
+                    } else if (value == 'delete') {
+                      _showDeleteSheet(context);
+                    }
+                  },
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(value: 'edit', child: Text('Edit Bill')),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete Bill', style: TextStyle(color: errorRed))),
+                  ],
+                ),
               ],
             ),
           ),
@@ -411,11 +433,28 @@ class _BillCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  void _showDeleteSheet(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Bill'),
+        content: Text('Delete "${bill.name}"? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onDelete();
+            },
+            child: const Text('Delete', style: TextStyle(color: errorRed)),
+          ),
+        ],
+      ),
+    );
   }
+}
+
+String _formatDate(DateTime date) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return '${months[date.month - 1]} ${date.day}, ${date.year}';
 }

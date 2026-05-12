@@ -124,7 +124,9 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           const SizedBox(height: 16),
           _buildBillCard(bill),
           const SizedBox(height: 16),
-          _buildActionRow(),
+          _buildPersonSplit(),
+          const SizedBox(height: 20),
+          _buildPayButton(),
         ],
       ),
     );
@@ -341,81 +343,93 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     );
   }
 
-  Widget _buildActionRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _actionBtn(
-            icon: Icons.add_circle_outline,
-            label: 'Add Items',
-            onTap: () => context.go('/bill/${widget.billId}/items'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _actionBtn(
-            icon: Icons.group_add,
-            label: 'Invite',
-            onTap: () => context.go('/bill/${widget.billId}/invite'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _actionBtn(
-            icon: Icons.restaurant,
-            label: 'Assign',
-            onTap: () => context.go('/bill/${widget.billId}/assign'),
-            isPrimary: true,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _buildPersonSplit() {
+    final members = [
+      {'id': '1', 'name': 'You', 'avatar': 'Y'},
+    ];
 
-  Widget _actionBtn({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool isPrimary = false,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: isPrimary ? primaryBlue : cardWhite,
-            borderRadius: BorderRadius.circular(14),
-            border: isPrimary ? null : Border.all(color: inputBorder),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: cardWhite,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: isPrimary ? Colors.white : primaryBlue, size: 18),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isPrimary ? Colors.white : primaryBlue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Per Person',
+            style: TextStyle(color: textDark, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          ...members.map((m) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: dimColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: inputBorder),
+                  ),
+                  child: Center(
+                    child: Text(m['avatar']!, style: const TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(m['name']!, style: const TextStyle(color: textDark, fontSize: 14)),
+                ),
+                Text(
+                  '฿${_total.toStringAsFixed(2)}',
+                  style: const TextStyle(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          )),
+          const Divider(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Total', style: TextStyle(color: textDark, fontSize: 15, fontWeight: FontWeight.bold)),
+              Text(
+                '฿${_total.toStringAsFixed(2)}',
+                style: const TextStyle(color: primaryBlue, fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
+
+  Widget _buildPayButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        onPressed: () => context.go('/bill/${widget.billId}/assign'),
+        child: const Text('Assign & Pay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      ),
+    );
+  }
+
+  static const dimColor = Color(0xFFE4E6FF);
 
   String _formatDate(DateTime date) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
