@@ -11,20 +11,6 @@ String get _baseUrl {
   return 'http://localhost:3000';
 }
 
-String get cloudinaryCloudName {
-  const cloudName = String.fromEnvironment(
-    'CLOUDINARY_CLOUD_NAME',
-    defaultValue: '',
-  );
-  if (cloudName.isEmpty) {
-    return 'affea2eece1afb04bd3f76ccf7eb10'; // from console URL (c- prefix stripped)
-  }
-  return cloudName;
-}
-
-String get cloudinaryUploadUrl =>
-    'https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload';
-
 // ── Shared interceptor setup ──────────────────────────────────────────────
 
 /// Converts a raw [DioException] 4xx/5xx response into a readable [Exception].

@@ -637,13 +637,11 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     setState(() => _uploadingSlip = true);
 
     try {
-      final slipUrl = await uploadSlipToCloudinary(_slipBytes!);
-
       bool billSettled = false;
       if (_paymentId != null) {
         final result = await ref
             .read(paymentServiceProvider)
-            .confirm(_paymentId!, slipUrl: slipUrl);
+            .confirm(_paymentId!, slipBytes: _slipBytes);
         billSettled = result['bill_settled'] as bool? ?? false;
       }
 
