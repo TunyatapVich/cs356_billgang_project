@@ -17,33 +17,30 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   static const cardWhite = Colors.white;
   static const textDark = Color(0xFF2C3246);
   static const textGray = Color(0xFF8E95A9);
-  static const inputFill = Color(0xFFF2F4FC);
   static const inputBorder = Color(0xFFDCDFEA);
   static const errorRed = Color(0xFFD94848);
 
   String? _inviteCode;
+  String? _billId;
   Object? _error;
   bool _loading = true;
-  bool _loaded = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_loaded) return;
-    _loaded = true;
-    _loadInviteCode();
+  void initState() {
+    super.initState();
+    _loadCode();
   }
 
-  Future<void> _loadInviteCode() async {
+  Future<void> _loadCode() async {
     final billId = GoRouterState.of(context).pathParameters['id'];
-
     if (billId == null || billId.isEmpty) {
       setState(() {
         _loading = false;
-        _error = 'Bill id not found';
+        _error = 'Bill not found';
       });
       return;
     }
+    _billId = billId;
 
     setState(() {
       _loading = true;
@@ -51,15 +48,9 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
     });
 
     try {
-      final response = await ref
-          .read(authDioProvider)
-          .post('/bills/$billId/invite');
+      final response = await ref.read(authDioProvider).post('/bills/$_billId/invite');
       final data = response.data as Map<String, dynamic>;
-      final code = data['invite_code'] as String?;
-
-      if (code == null || code.isEmpty) {
-        throw Exception('Invite code not found');
-      }
+      final code = (data['invite_code'] ?? data['inviteCode'] ?? '') as String;
 
       if (!mounted) return;
       setState(() {
@@ -76,26 +67,12 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   }
 
   Future<void> _copyCode() async {
-    final code = _inviteCode;
-    if (code == null) return;
-
-    await Clipboard.setData(ClipboardData(text: code));
+    if (_inviteCode == null) return;
+    await Clipboard.setData(ClipboardData(text: _inviteCode!));
     if (!mounted) return;
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Invite code copied')));
-  }
-
-  void _goBack() {
-    final billId = GoRouterState.of(context).pathParameters['id'];
-
-    if (billId == null || billId.isEmpty) {
-      context.go('/');
-      return;
-    }
-
-    context.go('/bill/$billId/items');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Invite code copied')),
+    );
   }
 
   @override
@@ -108,10 +85,10 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: primaryBlue),
-          onPressed: _goBack,
+          onPressed: () => context.go('/bill/$_billId/summary'),
         ),
         title: const Text(
-          'Invite Friends',
+          'Invite',
           style: TextStyle(
             color: textDark,
             fontSize: 18,
@@ -119,60 +96,15 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
           ),
         ),
       ),
-      body: _buildBody(),
-      bottomNavigationBar: _buildBottomNav(),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? _buildError()
+              : _buildBody(),
     );
   }
 
   Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return _buildError(_error!);
-    }
-
-    return _buildContent(_inviteCode!);
-  }
-
-  Widget _buildError(Object error) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, color: errorRed, size: 42),
-          const SizedBox(height: 12),
-          const Text(
-            'Unable to load invite code',
-            style: TextStyle(
-              color: textDark,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            error.toString(),
-            style: const TextStyle(color: textGray, fontSize: 13),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: _loadInviteCode,
-            child: const Text('Try Again'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContent(String code) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(
@@ -180,7 +112,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
           _buildHero(),
           const SizedBox(height: 24),
           const Text(
-            'Spread the word',
+            'Invite Friends',
             style: TextStyle(
               color: textDark,
               fontSize: 28,
@@ -190,14 +122,20 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Share this code with your friends to join this bill.',
+            'Share this code with your friends to split the bill together.',
             style: TextStyle(color: textGray, fontSize: 16, height: 1.4),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 32),
+          _buildCodeCard(),
+          if (_error != null) ...[
+            const SizedBox(height: 16),
+            _buildErrorWidget(_error!),
+          ],
           const SizedBox(height: 24),
-          _buildInviteCard(code),
-          const SizedBox(height: 20),
-          _buildInviteHint(),
+          _buildDivider(),
+          const SizedBox(height: 24),
+          _buildBackButton(),
         ],
       ),
     );
@@ -208,19 +146,19 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
       clipBehavior: Clip.none,
       children: [
         Container(
-          width: 220,
-          height: 220,
+          width: 160,
+          height: 160,
           decoration: const BoxDecoration(
             color: Color(0xFFE4E6FF),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.groups, color: primaryBlue, size: 96),
+          child: const Icon(Icons.group_add, color: primaryBlue, size: 72),
         ),
         Positioned(
-          right: 8,
+          right: 4,
           bottom: 4,
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: primaryBlue,
               shape: BoxShape.circle,
@@ -232,24 +170,18 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.military_tech,
-              color: Colors.white,
-              size: 30,
-            ),
+            child: const Icon(Icons.share, color: Colors.white, size: 24),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildInviteCard(String code) {
+  Widget _buildCodeCard() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: cardWhite,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: inputBorder),
         boxShadow: [
           BoxShadow(
@@ -263,44 +195,27 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-            decoration: BoxDecoration(
-              color: inputFill,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: primaryBlue.withValues(alpha: 0.20),
-                width: 2,
-              ),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             child: Text(
-              code,
+              _inviteCode ?? '',
               style: const TextStyle(
-                color: primaryBlue,
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 2,
+                letterSpacing: 3,
+                color: primaryBlue,
               ),
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 16),
+          const Divider(height: 1),
           SizedBox(
             width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-              ),
+            child: TextButton.icon(
               onPressed: _copyCode,
-              icon: const Icon(Icons.content_copy, size: 20),
+              icon: const Icon(Icons.content_copy, size: 18),
               label: const Text(
                 'Copy Code',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -309,45 +224,22 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
     );
   }
 
-  Widget _buildInviteHint() {
+  Widget _buildErrorWidget(Object error) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F5FE),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: inputBorder),
+        color: errorRed.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: errorRed.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: primaryBlue.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.redeem, color: primaryBlue, size: 22),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'INVITE HINT',
-                  style: TextStyle(
-                    color: primaryBlue,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Friends can use this code to join and split together.',
-                  style: TextStyle(color: textGray, fontSize: 13, height: 1.3),
-                ),
-              ],
+          const Icon(Icons.error_outline, color: errorRed, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              error.toString(),
+              style: const TextStyle(color: errorRed, fontSize: 13),
             ),
           ),
         ],
@@ -355,60 +247,72 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
     );
   }
 
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: cardWhite,
-        border: Border(top: BorderSide(color: inputBorder)),
-      ),
-      child: SafeArea(
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.home_outlined,
-                label: 'Home',
-                onTap: () => context.go('/'),
-              ),
-              _buildNavItem(
-                icon: Icons.group_add,
-                label: 'Invites',
-                isActive: true,
-              ),
-              _buildNavItem(icon: Icons.military_tech, label: 'Rewards'),
-              _buildNavItem(icon: Icons.person_outline, label: 'Profile'),
-            ],
-          ),
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(child: Container(height: 1, color: inputBorder)),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text('or', style: TextStyle(color: textGray, fontSize: 14)),
+        ),
+        Expanded(child: Container(height: 1, color: inputBorder)),
+      ],
+    );
+  }
+
+  Widget _buildBackButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primaryBlue,
+          side: const BorderSide(color: primaryBlue, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 0,
+        ),
+        onPressed: () => context.go('/bill/$_billId/summary'),
+        icon: const Icon(Icons.arrow_back, size: 20),
+        label: const Text(
+          'Back to Summary',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    bool isActive = false,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
+  Widget _buildError() {
+    return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isActive ? primaryBlue : textGray, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
+            const Icon(Icons.error_outline, color: errorRed, size: 42),
+            const SizedBox(height: 12),
+            const Text(
+              'Unable to load invite code',
               style: TextStyle(
-                color: isActive ? primaryBlue : textGray,
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                color: textDark,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _error.toString(),
+              style: const TextStyle(color: textGray, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: _loadCode,
+              child: const Text('Try Again'),
             ),
           ],
         ),

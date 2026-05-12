@@ -86,7 +86,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
       data: (bill) {
         if (bill != null) {
           ref.invalidate(billListProvider);
-          context.go('/bill/${bill.id}/items');
+          context.go('/bill/${bill.id}/summary');
         }
       },
       error: (e, _) => setState(() => _error = e.toString()),

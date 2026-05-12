@@ -104,7 +104,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => context.go('/bill/${widget.billId}/invite'),
+            onPressed: () => context.go('/bill/${widget.billId}/summary'),
             child: const Text(
               'Done',
               style: TextStyle(

@@ -346,7 +346,7 @@ class _BillCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => context.go('/bill/${bill.id}/items'),
+          onTap: () => context.go('/bill/${bill.id}/summary'),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(

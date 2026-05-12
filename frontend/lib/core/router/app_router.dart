@@ -8,6 +8,8 @@ import '../../features/home/home_screen.dart';
 import '../../features/bill/create_bill_screen.dart';
 import '../../features/bill/add_items_screen.dart';
 import '../../features/bill/ocr_review_screen.dart';
+import '../../features/bill/bill_summary_screen.dart';
+import '../../features/assign/assign_screen.dart';
 import '../../features/invite/invite_screen.dart';
 import '../../features/invite/join_screen.dart';
 
@@ -55,6 +57,16 @@ final appRouter = GoRouter(
       path: '/bill/:id/items',
       builder: (context, state) =>
           AddItemsScreen(billId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/bill/:id/summary',
+      builder: (context, state) =>
+          BillSummaryScreen(billId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/bill/:id/assign',
+      builder: (context, state) =>
+          AssignScreen(billId: state.pathParameters['id']!),
     ),
     GoRoute(
       path: '/bill/:id/ocr',
