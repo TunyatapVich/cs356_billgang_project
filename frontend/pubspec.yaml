@@ -63,6 +63,9 @@ dependencies:
   # Loading skeleton
   shimmer: ^3.0.0
   thaiqr: ^1.1.1
+  screenshot: ^3.0.0
+  image_gallery_saver_plus: ^4.0.1
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:

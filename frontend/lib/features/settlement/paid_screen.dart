@@ -1,7 +1,10 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:thaiqr/thaiqr.dart';
 import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
@@ -30,10 +33,12 @@ class PaidScreen extends ConsumerStatefulWidget {
 }
 
 class _PaidScreenState extends ConsumerState<PaidScreen> {
+  final _screenshotController = ScreenshotController();
   String? _qrData;
   String? _promptpayNumber;
   String? _fetchedToUserName;
   bool _loading = true;
+  bool _saving = false;
   Object? _error;
 
   @override
@@ -71,6 +76,47 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     }
   }
 
+  Future<void> _saveQrImage() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    try {
+      final Uint8List? imageBytes = await _screenshotController.capture(
+        pixelRatio: 3.0,
+      );
+      if (imageBytes == null) {
+        _showSnackBar('Failed to capture QR code');
+        return;
+      }
+
+      final result = await ImageGallerySaverPlus.saveImage(
+        imageBytes,
+        quality: 100,
+        name: 'billgang_qr_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      if (result['isSuccess'] == true) {
+        _showSnackBar('QR code saved to gallery');
+      } else {
+        _showSnackBar('Failed to save QR code');
+      }
+    } catch (e) {
+      _showSnackBar('Error: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,6 +138,17 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
           ),
         ),
         actions: [
+          if (!_loading && _promptpayNumber != null)
+            IconButton(
+              icon: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save_alt, color: AppColors.primaryBlue),
+              onPressed: _saving ? null : _saveQrImage,
+            ),
           if (!_loading && _promptpayNumber != null)
             TextButton(
               onPressed: () => context.go('/bill/${widget.billId}/settlement'),
@@ -174,64 +231,67 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     );
 
     return Center(
-      child: Container(
-        width: 350,
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 1. Blue banner with Thai QR logo - full width
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: AppColors.thaiQRBlue,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  topRight: Radius.circular(8),
+      child: Screenshot(
+        controller: _screenshotController,
+        child: Container(
+          width: 350,
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. Blue banner with Thai QR logo - full width
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: AppColors.thaiQRBlue,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
+                  ),
+                ),
+                child: Image.asset(
+                  'assets/header.png',
+                  fit: BoxFit.cover,
                 ),
               ),
-              child: Image.asset(
-                'assets/header.png',
-                fit: BoxFit.cover,
+              // 2. QR Code with PromptPay logo centered inside
+              Container(
+                width: 200,
+                height: 200,
+                margin: const EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: AppColors.inputBorder),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    QrImageView(
+                      data: qrPayload,
+                      version: QrVersions.auto,
+                      size: 200,
+                      backgroundColor: Colors.white,
+                    ),
+                    Image.asset(
+                      'assets/logo.png',
+                      height: 38,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            // 2. QR Code with PromptPay logo centered inside
-            Container(
-              width: 200,
-              height: 200,
-              margin: const EdgeInsets.symmetric(vertical: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.inputBorder),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  QrImageView(
-                    data: qrPayload,
-                    version: QrVersions.auto,
-                    size: 200,
-                    backgroundColor: Colors.white,
-                  ),
-                  Image.asset(
-                    'assets/logo.png',
-                    height: 38,
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
