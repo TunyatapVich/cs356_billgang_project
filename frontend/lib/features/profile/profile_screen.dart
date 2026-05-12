@@ -28,7 +28,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Controllers start empty, will be populated by ref.watch below
+    // Controllers start empty, will be populated once on first build
   }
 
   @override
@@ -81,18 +81,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final isLoading = ref.watch(authProvider).isLoading;
     final authState = ref.watch(authProvider);
 
-    // Update controllers when auth state changes
+    // Populate controllers ONCE on first build when user data is available
     authState.whenData((user) {
-      if (user != null) {
-        final newDisplayName = user.displayName ?? '';
-        final newPromptpay = user.promptpayNumber ?? '';
-        if (_displayNameController.text != newDisplayName ||
-            _promptpayController.text != newPromptpay) {
-          setState(() {
-            _displayNameController.text = newDisplayName;
-            _promptpayController.text = newPromptpay;
-          });
-        }
+      if (user != null && _displayNameController.text.isEmpty && _promptpayController.text.isEmpty) {
+        _displayNameController.text = user.displayName ?? '';
+        _promptpayController.text = user.promptpayNumber ?? '';
       }
     });
 
