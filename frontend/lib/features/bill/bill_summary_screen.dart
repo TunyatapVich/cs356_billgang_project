@@ -491,6 +491,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
               final initial = displayName.isNotEmpty
                   ? displayName[0].toUpperCase()
                   : 'U';
+              final avatarUrl = user['avatar_url'] as String?;
               final owed = (p['owed'] as num?)?.toDouble() ?? 0.0;
               final isMe = p['user_id'] == currentUserId;
               return Padding(
@@ -510,14 +511,36 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                         ),
                       ),
                       child: Center(
-                        child: Text(
-                          initial,
-                          style: TextStyle(
-                            color: isMe ? Colors.white : AppColors.primaryBlue,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
+                        child: avatarUrl != null && avatarUrl.isNotEmpty
+                            ? ClipOval(
+                                child: Image.network(
+                                  avatarUrl,
+                                  width: 36,
+                                  height: 36,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Text(
+                                        initial,
+                                        style: TextStyle(
+                                          color: isMe
+                                              ? Colors.white
+                                              : AppColors.primaryBlue,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                ),
+                              )
+                            : Text(
+                                initial,
+                                style: TextStyle(
+                                  color: isMe
+                                      ? Colors.white
+                                      : AppColors.primaryBlue,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(width: 12),

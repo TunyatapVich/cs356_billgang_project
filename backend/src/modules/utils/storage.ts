@@ -8,12 +8,13 @@ const s3 = new S3Client({
   region: "auto",
 });
 
-export const uploadSlip = async (
+export const uploadImage = async (
   data: ArrayBuffer,
   mimeType: string,
+  folder: string = "slips"
 ): Promise<string> => {
   const ext = mimeType.includes("png") ? "png" : "jpg";
-  const key = `slips/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const key = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
   await s3.file(key).write(data, { type: mimeType });
   return `${process.env.R2_PUBLIC_URL}/${key}`;
 };

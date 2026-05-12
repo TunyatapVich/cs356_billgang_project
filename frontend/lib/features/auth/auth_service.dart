@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
@@ -37,16 +38,22 @@ class AuthService {
   Future<Map<String, dynamic>> updateProfile({
     String? displayName,
     String? avatarUrl,
+    Uint8List? avatarBytes,
     String? promptpayNumber,
   }) async {
-    final response = await _dio.put(
-      '/auth/profile',
-      data: {
-        if (displayName != null) 'display_name': displayName,
-        if (avatarUrl != null) 'avatar_url': avatarUrl,
-        if (promptpayNumber != null) 'promptpay_number': promptpayNumber,
-      },
-    );
+    final formData = FormData.fromMap({
+      if (displayName != null) 'display_name': displayName,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+      if (promptpayNumber != null) 'promptpay_number': promptpayNumber,
+      if (avatarBytes != null)
+        'avatar_file': MultipartFile.fromBytes(
+          avatarBytes,
+          filename: 'avatar.jpg',
+          contentType: DioMediaType('image', 'jpeg'),
+        ),
+    });
+
+    final response = await _dio.put('/auth/profile', data: formData);
     return response.data as Map<String, dynamic>;
   }
 
@@ -57,5 +64,5 @@ class AuthService {
 }
 
 final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(ref.read(dioProvider));
+  return AuthService(ref.read(authDioProvider));
 });

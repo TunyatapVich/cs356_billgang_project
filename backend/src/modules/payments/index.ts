@@ -9,7 +9,7 @@ import {
 import { PaymentService } from "./service";
 import { authPlugin } from "../utils/auth";
 import { broadcast } from "../utils/broker";
-import { uploadSlip } from "../utils/storage";
+import { uploadImage } from "../utils/storage";
 
 const handleError = (err: any, set: any) => {
   if (err?.message === "FORBIDDEN") {
@@ -77,7 +77,7 @@ export const PaymentModule = new Elysia({ prefix: "/payments" })
       try {
         let slipUrl: string | undefined;
         if (body.slip) {
-          slipUrl = await uploadSlip(
+          slipUrl = await uploadImage(
             await body.slip.arrayBuffer(),
             body.slip.type || "image/jpeg",
           );

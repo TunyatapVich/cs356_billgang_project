@@ -3,6 +3,7 @@ import { jwt } from "@elysiajs/jwt";
 import { AuthModel } from "./model";
 import { AuthService } from "./service";
 import { authPlugin } from "../utils/auth";
+import { uploadImage } from "../utils/storage";
 
 export const AuthModule = new Elysia({ prefix: "/auth" })
   .use(AuthModel)
@@ -89,7 +90,20 @@ export const AuthModule = new Elysia({ prefix: "/auth" })
         return { message: "Unauthorized" };
       }
       try {
-        const user = await AuthService.updateProfile(userid, body);
+        let finalAvatarUrl = body.avatar_url;
+        if (body.avatar_file) {
+          finalAvatarUrl = await uploadImage(
+            await body.avatar_file.arrayBuffer(),
+            body.avatar_file.type || "image/jpeg",
+            "avatars"
+          );
+        }
+
+        const user = await AuthService.updateProfile(userid, {
+          display_name: body.display_name,
+          avatar_url: finalAvatarUrl,
+          promptpay_number: body.promptpay_number,
+        });
         const token = await jwt.sign({ sub: user.id });
         return { token, user };
       } catch (err: any) {

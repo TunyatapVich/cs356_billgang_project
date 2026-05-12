@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/storage/token_storage.dart';
 import '../bill/bill_provider.dart';
@@ -84,6 +85,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
   Future<void> updateProfile({
     String? displayName,
     String? avatarUrl,
+    Uint8List? avatarBytes,
     String? promptpayNumber,
   }) async {
     final data = await ref
@@ -91,11 +93,13 @@ class AuthNotifier extends AsyncNotifier<User?> {
         .updateProfile(
           displayName: displayName,
           avatarUrl: avatarUrl,
+          avatarBytes: avatarBytes,
           promptpayNumber: promptpayNumber,
         );
     final userJson = data['user'] as Map<String, dynamic>?;
     if (userJson != null) {
       state = AsyncData(User.fromJson(userJson));
+      ref.invalidate(billListProvider);
     }
   }
 }
