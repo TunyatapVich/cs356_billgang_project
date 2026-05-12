@@ -15,6 +15,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _promptpayController = TextEditingController();
   String? _errorMessage;
   bool _controllersInitialized = false;
+  bool _isEditing = false;
 
   static const primaryBlue = Color(0xFF4E54C8);
   static const bgLight = Color(0xFFF6F8FD);
@@ -24,6 +25,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static const inputBorder = Color(0xFFDCDFEA);
   static const errorRed = Color(0xFFE84545);
 
+  String? _displayNameError;
   String? _promptpayError;
 
   @override
@@ -56,12 +58,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _validate() {
     bool valid = true;
     setState(() {
+      _displayNameError = null;
       _promptpayError = null;
     });
 
-    final promptpay = _promptpayController.text.trim();
-    if (promptpay.isNotEmpty && promptpay.length < 10) {
-      setState(() => _promptpayError = 'PromptPay number must be at least 10 digits');
+    final displayName = _displayNameController.text.trim();
+    if (displayName.isEmpty) {
+      setState(() => _displayNameError = 'Display name is required');
       valid = false;
     }
 
@@ -83,7 +86,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Profile updated')),
           );
-          context.go('/');
+          setState(() => _isEditing = false);
         }
       },
       error: (e, _) => setState(() => _errorMessage = e.toString()),
@@ -104,20 +107,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           icon: const Icon(Icons.arrow_back, color: textDark),
           onPressed: () => context.go('/'),
         ),
-        title: const Text(
-          'Profile',
-          style: TextStyle(color: textDark, fontWeight: FontWeight.bold),
+        title: Text(
+          _isEditing ? 'Edit Profile' : 'Profile',
+          style: const TextStyle(color: textDark, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: textDark),
-            onPressed: () async {
-              await ref.read(authProvider.notifier).logout();
-              if (mounted) context.go('/login');
-            },
-          ),
-        ],
+        actions: _isEditing
+            ? []
+            : [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: primaryBlue),
+                  onPressed: () => setState(() => _isEditing = true),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout, color: textDark),
+                  onPressed: () async {
+                    await ref.read(authProvider.notifier).logout();
+                    if (mounted) context.go('/login');
+                  },
+                ),
+              ],
       ),
       body: SafeArea(
         child: Center(
@@ -137,7 +146,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   _buildErrorBanner(_errorMessage!),
                 ],
                 const SizedBox(height: 24),
-                _buildSaveButton(isLoading),
+                if (_isEditing) ...[
+                  _buildSaveButton(isLoading),
+                  const SizedBox(height: 12),
+                  _buildCancelButton(),
+                ],
               ],
             ),
           ),
@@ -189,6 +202,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       controller: _displayNameController,
       hintText: 'Display name',
       prefixIcon: Icons.person_outline,
+      errorText: _displayNameError,
     );
   }
 
@@ -230,6 +244,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             controller: controller,
             obscureText: obscureText,
             keyboardType: keyboardType,
+            readOnly: !_isEditing,
             style: const TextStyle(color: textDark, fontSize: 15),
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
@@ -330,6 +345,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildCancelButton() {
+    return SizedBox(
+      height: 56,
+      child: OutlinedButton(
+        onPressed: () => setState(() => _isEditing = false),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: textGray,
+          side: const BorderSide(color: inputBorder),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        child: const Text(
+          'Cancel',
+          style: TextStyle(
+            color: textGray,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
