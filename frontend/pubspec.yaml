@@ -62,6 +62,7 @@ dependencies:
 
   # Loading skeleton
   shimmer: ^3.0.0
+  thaiqr: ^1.1.1
 
 dev_dependencies:
   flutter_test:
