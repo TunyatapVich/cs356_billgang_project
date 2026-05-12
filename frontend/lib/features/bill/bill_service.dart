@@ -114,6 +114,11 @@ class BillService {
     await _dio.delete('/bills/$billId/items/$itemId/assign/$userId');
   }
 
+  Future<Map<String, dynamic>> getDebts(String billId) async {
+    final response = await _dio.get('/bills/$billId/debts');
+    return response.data as Map<String, dynamic>;
+  }
+
   // ── OCR ────────────────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> runOcr({

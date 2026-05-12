@@ -141,7 +141,7 @@ export class BillService {
         },
       },
     });
-    await UserStatsService.onBillCreated(userid);
+    UserStatsService.onBillCreated(userid).catch(console.error);
     return serializeBill(bill);
   }
 
@@ -273,7 +273,7 @@ export class BillService {
       await prisma.billMembers.create({
         data: { bill_id: bill.id, user_id: userid, role: "member" },
       });
-      await UserStatsService.onBillJoined(userid);
+      UserStatsService.onBillJoined(userid).catch(console.error);
     }
 
     return this.getBill(userid, bill.id);

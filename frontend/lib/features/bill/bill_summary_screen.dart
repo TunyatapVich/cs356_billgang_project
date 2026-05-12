@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../auth/auth_provider.dart';
 import 'bill_provider.dart';
 import 'bill_service.dart';
 
@@ -18,6 +19,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   Bill? _bill;
   List<BillItem> _items = [];
   List<Map<String, dynamic>> _members = [];
+  List<Map<String, dynamic>> _perPerson = [];
   bool _loading = true;
   Object? _error;
 
@@ -34,17 +36,27 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     });
 
     try {
-      final data = await ref.read(billServiceProvider).getBill(widget.billId);
-      final bill = Bill.fromJson(data);
-      final rawItems = (data['items'] as List<dynamic>?) ?? [];
+      final service = ref.read(billServiceProvider);
+      final results = await Future.wait<Map<String, dynamic>>([
+        service.getBill(widget.billId),
+        service.getDebts(widget.billId),
+      ]);
+
+      final billData = results[0];
+      final debtsData = results[1];
+
+      final bill = Bill.fromJson(billData['bill'] as Map<String, dynamic>);
+      final rawItems = (billData['items'] as List<dynamic>?) ?? [];
       final items = rawItems.cast<Map<String, dynamic>>().map(BillItem.fromJson).toList();
-      final members = (data['members'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+      final members = (billData['members'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+      final perPerson = (debtsData['per_person'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
 
       if (!mounted) return;
       setState(() {
         _bill = bill;
         _items = items;
         _members = members;
+        _perPerson = perPerson;
         _loading = false;
       });
     } catch (e) {
@@ -346,9 +358,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   }
 
   Widget _buildPersonSplit() {
-    final members = [
-      {'id': '1', 'name': 'You', 'avatar': 'Y'},
-    ];
+    final currentUserId = ref.read(authProvider).value?.id;
 
     return Container(
       decoration: BoxDecoration(
@@ -371,33 +381,57 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
             style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          ...members.map((m) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.dimBlue,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.inputBorder),
-                  ),
-                  child: Center(
-                    child: Text(m['avatar']!, style: const TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
+          if (_perPerson.isEmpty)
+            const Text('No assignments yet', style: TextStyle(color: AppColors.textGray, fontSize: 14))
+          else
+            ..._perPerson.map((p) {
+              final user = p['user'] as Map<String, dynamic>? ?? {};
+              final displayName = (user['display_name'] ?? user['email'] ?? 'Unknown') as String;
+              final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+              final owed = (p['owed'] as num?)?.toDouble() ?? 0.0;
+              final isMe = p['user_id'] == currentUserId;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: isMe ? AppColors.primaryBlue : AppColors.dimBlue,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: isMe ? AppColors.primaryBlue : AppColors.inputBorder),
+                      ),
+                      child: Center(
+                        child: Text(
+                          initial,
+                          style: TextStyle(
+                            color: isMe ? Colors.white : AppColors.primaryBlue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        isMe ? '$displayName (You)' : displayName,
+                        style: TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 14,
+                          fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '฿${owed.toStringAsFixed(2)}',
+                      style: const TextStyle(color: AppColors.primaryBlue, fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(m['name']!, style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
-                ),
-                Text(
-                  '฿${_total.toStringAsFixed(2)}',
-                  style: const TextStyle(color: AppColors.primaryBlue, fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          )),
+              );
+            }),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -415,22 +449,45 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   }
 
 
+  double get _myOwedAmount {
+    final currentUserId = ref.read(authProvider).value?.id;
+    if (currentUserId == null || _perPerson.isEmpty) return _total;
+    final mine = _perPerson.where((p) => p['user_id'] == currentUserId).firstOrNull;
+    return (mine?['owed'] as num?)?.toDouble() ?? 0.0;
+  }
+
   Widget _buildPayButton() {
     final payerId = _bill?.paidBy;
+    final currentUserId = ref.read(authProvider).value?.id;
+    final isCurrentUserPayer = payerId != null && payerId == currentUserId;
+    final myOwed = _myOwedAmount;
+    final canPay = payerId != null && !isCurrentUserPayer && myOwed > 0;
+
+    String label;
+    if (payerId == null) {
+      label = 'No Payer Set';
+    } else if (isCurrentUserPayer) {
+      label = 'You paid this bill';
+    } else if (myOwed <= 0) {
+      label = 'Nothing to pay';
+    } else {
+      label = 'Pay ฿${myOwed.toStringAsFixed(2)}';
+    }
+
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: payerId == null ? AppColors.textGray : AppColors.primaryBlue,
+          backgroundColor: canPay ? AppColors.primaryBlue : AppColors.textGray,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        onPressed: payerId == null
-            ? null
-            : () => context.go('/bill/${widget.billId}/paid/$payerId/${_total.toInt()}?amount=${_total.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}'),
-        child: Text(payerId == null ? 'No Payer Set' : 'Pay', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        onPressed: canPay
+            ? () => context.go('/bill/${widget.billId}/paid/$payerId/${myOwed.toInt()}?amount=${myOwed.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}')
+            : null,
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
     );
   }

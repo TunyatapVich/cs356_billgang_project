@@ -52,7 +52,9 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
               : Column(
                   children: [
                     _buildPayerSection(assignState),
+                    const SizedBox(height: 12),
                     _buildMemberBar(assignState),
+                    const SizedBox(height: 12),
                     Expanded(child: _buildItemList(assignState)),
                     _buildBottomBar(),
                   ],
@@ -218,129 +220,113 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
   }
 
   Widget _buildMemberBar(AssignState assignState) {
+    if (assignState.members.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.person_add_outlined, color: AppColors.textGray, size: 18),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Invite members to assign items',
+                style: TextStyle(color: AppColors.textGray, fontSize: 13),
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.go('/bill/${widget.billId}/invite'),
+              child: const Text('Invite', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
         color: AppColors.cardWhite,
-        border: Border(bottom: BorderSide(color: AppColors.inputBorder)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.inputBorder),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Text(
-                  assignState.members.isEmpty
-                      ? 'No members yet — invite first'
-                      : 'Assign items to:',
-                  style: const TextStyle(
-                    color: AppColors.textGray,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (assignState.members.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBlue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      assignState.members[assignState.selectedMemberIndex].name,
-                      style: const TextStyle(
-                        color: AppColors.primaryBlue,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text('Assign to', style: TextStyle(color: AppColors.textGray, fontSize: 12, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 10),
-          if (assignState.members.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: OutlinedButton.icon(
-                onPressed: () => context.go('/bill/${widget.billId}/invite'),
-                icon: const Icon(Icons.person_add, size: 16),
-                label: const Text('Invite members'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primaryBlue,
-                  side: const BorderSide(color: AppColors.primaryBlue),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-              ),
-            )
-          else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: List.generate(assignState.members.length, (i) {
-                  final m = assignState.members[i];
-                  final sel = i == assignState.selectedMemberIndex;
-                  final isPayer = m.id == assignState.payerId;
-                  return GestureDetector(
-                    onTap: () => ref.read(assignProvider.notifier).selectMember(i),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: sel ? AppColors.primaryBlue : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: sel ? AppColors.primaryBlue : AppColors.inputBorder,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: sel ? Colors.white : AppColors.dimBlue,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                m.avatar,
-                                style: TextStyle(
-                                  color: sel ? AppColors.primaryBlue : AppColors.textGray,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: List.generate(assignState.members.length, (i) {
+                final m = assignState.members[i];
+                final sel = i == assignState.selectedMemberIndex;
+                final isPayer = m.id == assignState.payerId;
+                return GestureDetector(
+                  onTap: () => ref.read(assignProvider.notifier).selectMember(i),
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Column(
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: sel ? AppColors.dimBlue : AppColors.inputFill,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: sel ? AppColors.primaryBlue : AppColors.inputBorder,
+                                  width: sel ? 2.5 : 1,
                                 ),
                               ),
+                              child: Center(
+                                child: Text(m.avatar, style: TextStyle(
+                                  color: sel ? AppColors.primaryBlue : AppColors.textGray,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                )),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            m.name,
-                            style: TextStyle(
-                              color: sel ? Colors.white : AppColors.textDark,
-                              fontSize: 13,
-                              fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-                            ),
-                          ),
-                          if (isPayer) ...[
-                            const SizedBox(width: 4),
-                            const Icon(Icons.star, color: Colors.amber, size: 14),
+                            if (isPayer)
+                              Positioned(
+                                right: -2,
+                                top: -2,
+                                child: Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: const BoxDecoration(color: Colors.amber, shape: BoxShape.circle),
+                                  child: const Icon(Icons.star, color: Colors.white, size: 10),
+                                ),
+                              ),
                           ],
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(m.name, style: TextStyle(
+                          color: sel ? AppColors.primaryBlue : AppColors.textGray,
+                          fontSize: 11,
+                          fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                        )),
+                      ],
                     ),
-                  );
-                }),
-              ),
+                  ),
+                );
+              }),
             ),
+          ),
         ],
       ),
     );
