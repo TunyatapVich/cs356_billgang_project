@@ -84,7 +84,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
-          onPressed: () => context.go('/bill/${widget.billId}/edit'),
+          onPressed: () => context.go('/bill/${widget.billId}/assign'),
         ),
         title: const Text(
           'Add Items',
@@ -96,7 +96,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => context.go('/bill/${widget.billId}/edit'),
+            onPressed: () => context.go('/bill/${widget.billId}/assign'),
             child: const Text(
               'Done',
               style: TextStyle(

@@ -43,19 +43,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => context.go('/bill/${widget.billId}/summary'),
-            child: const Text(
-              'Done',
-              style: TextStyle(
-                color: AppColors.primaryBlue,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
-            ),
-          ),
-        ],
+        actions: const [],
       ),
       body: assignState.loading
           ? const Center(child: CircularProgressIndicator())
@@ -66,6 +54,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                     _buildPayerSection(assignState),
                     _buildMemberBar(assignState),
                     Expanded(child: _buildItemList(assignState)),
+                    _buildBottomBar(),
                   ],
                 ),
     );
@@ -357,67 +346,6 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
     );
   }
 
-  Widget _memberAvatar(AssignMember m, bool sel, bool isPayer) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: Column(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: sel ? AppColors.dimBlue : const Color(0xFFF2F4FC),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isPayer ? Colors.amber : (sel ? AppColors.primaryBlue : AppColors.inputBorder),
-                    width: isPayer ? 2.5 : (sel ? 2.5 : 1),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    m.avatar,
-                    style: TextStyle(
-                      color: sel ? AppColors.primaryBlue : AppColors.textGray,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              if (isPayer)
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: const BoxDecoration(
-                      color: Colors.amber,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.star, color: Colors.white, size: 12),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            m.name,
-            style: TextStyle(
-              color: sel ? AppColors.primaryBlue : AppColors.textGray,
-              fontSize: 12,
-              fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildItemList(AssignState assignState) {
     final notifier = ref.read(assignProvider.notifier);
 
@@ -449,7 +377,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
           onTap: () async {
             final ok = await notifier.toggleItem(widget.billId, index);
             if (!ok && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(this.context).showSnackBar(
                 const SnackBar(
                   content: Text('Select a member first'),
                   duration: Duration(seconds: 2),
@@ -524,6 +452,48 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBottomBar() {
+    return Container(
+      padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, -4))],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => context.go('/bill/${widget.billId}/invite'),
+              icon: const Icon(Icons.person_add_outlined, size: 18),
+              label: const Text('Invite', style: TextStyle(fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primaryBlue,
+                side: const BorderSide(color: AppColors.primaryBlue),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: () => context.go('/bill/${widget.billId}/summary'),
+              child: const Text('View Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -188,8 +188,8 @@ class AssignNotifier extends Notifier<AssignState> {
     _socket?.disconnect();
 
     _socket = SocketClient();
-    _socket!.connect(billId, ''); // token handled server-side via cookie
-    _socket!.stream.listen(_handleSocketEvent);
+    _socket!.connect(billId, '');
+    _socketSub = _socket!.stream.listen(_handleSocketEvent);
   }
 
   void _handleSocketEvent(Map<String, dynamic> event) {

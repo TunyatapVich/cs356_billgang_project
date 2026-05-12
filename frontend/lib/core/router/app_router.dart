@@ -10,7 +10,6 @@ import '../../features/bill/create_bill_screen.dart';
 import '../../features/bill/add_items_screen.dart';
 import '../../features/bill/ocr_review_screen.dart';
 import '../../features/bill/bill_summary_screen.dart';
-import '../../features/bill/edit_bill_screen.dart';
 import '../../features/assign/assign_screen.dart';
 import '../../features/invite/invite_screen.dart';
 import '../../features/invite/join_screen.dart';
@@ -81,11 +80,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             BillSummaryScreen(billId: state.pathParameters['id']!),
       ),
       GoRoute(
-        path: '/bill/:id/edit',
-        builder: (context, state) =>
-            EditBillScreen(billId: state.pathParameters['id']!),
-      ),
-      GoRoute(
         path: '/bill/:id/assign',
         builder: (context, state) =>
             AssignScreen(billId: state.pathParameters['id']!),
@@ -104,7 +98,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             InviteScreen(billId: state.pathParameters['id']!),
       ),
-      // GoRoute(path: '/bill/:id/assign', builder: (_, __) => const Placeholder()),
       GoRoute(path: '/join', builder: (context, state) => const JoinScreen()),
       GoRoute(
         path: '/bill/:id/paid/:toUserId/:amount',
