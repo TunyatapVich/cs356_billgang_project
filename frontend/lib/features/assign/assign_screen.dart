@@ -33,7 +33,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
-          onPressed: () => context.go('/bill/${widget.billId}/summary'),
+          onPressed: () => context.go('/bill/${widget.billId}/items'),
         ),
         title: const Text(
           'Assign',
