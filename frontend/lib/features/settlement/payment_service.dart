@@ -48,11 +48,16 @@ final paymentServiceProvider = Provider<PaymentService>((ref) {
 
 // Cloudinary upload helper (Signed)
 Future<String> uploadSlipToCloudinary(Uint8List imageBytes) async {
-  final apiKey = cloudinaryApiKey;
-  final apiSecret = cloudinaryApiSecret;
-  final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  String apiKey;
+  String apiSecret;
+  try {
+    apiKey = cloudinaryApiKey;
+    apiSecret = cloudinaryApiSecret;
+  } catch (e) {
+    throw Exception('Cloudinary config error: $e');
+  }
 
-  // Generate SHA1 signature: apiSecret + timestamp + "image/upload" + preset name
+  final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   final params = 'timestamp=$timestamp&upload_preset=billgang_slips';
   final toSign = '$apiSecret$params';
   final signature = sha1.convert(utf8.encode(toSign)).toString();
