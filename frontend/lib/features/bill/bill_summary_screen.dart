@@ -182,7 +182,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
                       border: Border(
-                        bottom: Border(
+                        bottom: BorderSide(
                           color: AppColors.textGray.withValues(alpha: 0.3),
                           width: 1,
                         ),
@@ -475,4 +475,31 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
+}
+
+class _JaggedTopClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    final notchCount = 12;
+    final notchWidth = size.width / notchCount;
+    final notchDepth = 6.0;
+
+    path.moveTo(0, notchDepth);
+    for (int i = 0; i < notchCount; i++) {
+      final x1 = notchWidth * i + notchWidth / 2;
+      final y1 = 0.0;
+      final x2 = notchWidth * (i + 1);
+      final y2 = notchDepth;
+      path.lineTo(x1, y1);
+      path.lineTo(x2, y2);
+    }
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
