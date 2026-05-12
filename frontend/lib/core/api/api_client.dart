@@ -12,11 +12,10 @@ String get _baseUrl {
 }
 
 String get cloudinaryCloudName {
-  // Injected via --dart-define for security (CI/CD/prod). Fallback to placeholder for dev.
-  // Example: flutter run --dart-define=CLOUDINARY_CLOUD_NAME=xxx
+  // Injected via --dart-define for security. Dev fallback only.
   const cloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME', defaultValue: '');
   if (cloudName.isEmpty) {
-    throw Exception('CLOUDINARY_CLOUD_NAME not configured. Run with --dart-define=CLOUDINARY_CLOUD_NAME=your_cloud_name');
+    return 'ce514272ec89202990dbde5ac7eedf386b'; // dev fallback
   }
   return cloudName;
 }
@@ -25,7 +24,7 @@ String get cloudinaryCloudName {
 String get cloudinaryUploadPreset {
   const preset = String.fromEnvironment('CLOUDINARY_UPLOAD_PRESET', defaultValue: '');
   if (preset.isEmpty) {
-    throw Exception('CLOUDINARY_UPLOAD_PRESET not configured. Run with --dart-define=CLOUDINARY_UPLOAD_PRESET=your_preset');
+    return 'billgang_slips'; // dev fallback
   }
   return preset;
 }

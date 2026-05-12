@@ -46,6 +46,9 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   bool _slipUploaded = false;
   Object? _error;
 
+  // Slip preview
+  Uint8List? _slipBytes;
+
   @override
   void initState() {
     super.initState();
@@ -87,9 +90,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     setState(() => _saving = true);
 
     try {
-      final Uint8List? imageBytes = await _screenshotController.capture(
-        pixelRatio: 3.0,
-      );
+      final Uint8List? imageBytes = await _screenshotController.capture(pixelRatio: 3.0);
       if (imageBytes == null) {
         _showSnackBar('Failed to capture QR code');
         return;
@@ -136,7 +137,9 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
           onPressed: () => context.go('/bill/${widget.billId}/summary'),
         ),
         title: Text(
-          _loading ? 'Loading...' : '฿${(widget.rawAmount ?? widget.amount.toStringAsFixed(2))}',
+          _loading
+              ? 'Loading...'
+              : '฿${widget.rawAmount ?? widget.amount.toStringAsFixed(2)}',
           style: const TextStyle(
             color: AppColors.textDark,
             fontSize: 18,
@@ -154,14 +157,6 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                     )
                   : const Icon(Icons.save_alt, color: AppColors.primaryBlue),
               onPressed: _saving ? null : _saveQrImage,
-            ),
-          if (!_loading && _promptpayNumber != null)
-            TextButton(
-              onPressed: () => context.go('/bill/${widget.billId}/summary'),
-              child: const Text(
-                'Done',
-                style: TextStyle(color: AppColors.primaryBlue, fontSize: 16),
-              ),
             ),
         ],
       ),
@@ -182,11 +177,9 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
           children: [
             const Icon(Icons.error_outline, color: AppColors.errorRed, size: 42),
             const SizedBox(height: 12),
-            Text(
-              _error.toString(),
-              style: const TextStyle(color: AppColors.textGray, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
+            Text(_error.toString(),
+                style: const TextStyle(color: AppColors.textGray, fontSize: 13),
+                textAlign: TextAlign.center),
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -211,155 +204,325 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     final generator = ThaiQRGenerator();
     final qrPayload = generator.generateCodeFromMobileOrId(
       _promptpayNumber!,
-      (widget.rawAmount ?? widget.amount.toStringAsFixed(2)),
+      widget.rawAmount ?? widget.amount.toStringAsFixed(2),
     );
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // QR code card (screenshot-able)
-          Screenshot(
-            controller: _screenshotController,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                // To: name chip
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.dimBlue,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Blue banner
-                  Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: AppColors.thaiQRBlue,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        topRight: Radius.circular(8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person_outline, color: AppColors.primaryBlue, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        'ชำระให้ ${_fetchedToUserName ?? widget.toUserName}',
+                        style: const TextStyle(
+                          color: AppColors.primaryBlue,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    child: Image.asset('assets/header.png', fit: BoxFit.cover),
+                    ],
                   ),
-                  // QR Code
-                  Container(
-                    width: 200,
-                    height: 200,
-                    margin: const EdgeInsets.symmetric(vertical: 20),
+                ),
+
+                const SizedBox(height: 24),
+
+                // QR Card
+                Screenshot(
+                  controller: _screenshotController,
+                  child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      border: Border.all(color: AppColors.inputBorder),
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        QrImageView(data: qrPayload, version: QrVersions.auto, size: 200, backgroundColor: Colors.white),
-                        Image.asset('assets/logo.png', height: 38),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Slip upload section
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.inputBorder),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 22),
-                    SizedBox(width: 8),
-                    Text(
-                      'อัพสลิปยืนยันการโอน',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (_slipUploaded)
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.successGreen.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.successGreen.withValues(alpha: 0.4)),
-                    ),
-                    child: const Row(
+                    child: Column(
                       children: [
-                        Icon(Icons.check_circle, color: AppColors.successGreen, size: 20),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'อัพสลิปเรียบร้อยแล้ว รอตรวจสอบจากผู้รับ',
-                            style: TextStyle(color: AppColors.successGreen, fontSize: 14),
+                        // Header banner
+                        ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
+                          child: Image.asset('assets/header.png',
+                              width: double.infinity, fit: BoxFit.cover),
+                        ),
+                        // QR
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  border: Border.all(color: AppColors.inputBorder),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: QrImageView(
+                                  data: qrPayload,
+                                  version: QrVersions.auto,
+                                  size: 180,
+                                  backgroundColor: Colors.white,
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 8,
+                                child: Image.asset('assets/logo.png', height: 32),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  )
-                else
-                  OutlinedButton.icon(
-                    onPressed: _uploadingSlip ? null : _pickAndUploadSlip,
-                    icon: _uploadingSlip
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.upload_file),
-                    label: Text(_uploadingSlip ? 'กำลังอัพโหลด...' : 'เลือกรูปสลิป'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primaryBlue,
-                      side: const BorderSide(color: AppColors.primaryBlue),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
                   ),
+                ),
+
+                const SizedBox(height: 28),
+
+                // Slip upload section
+                if (!_slipUploaded) _buildSlipUploadZone() //
+                else                _buildSlipSuccessCard(),
+
+                const SizedBox(height: 20),
               ],
             ),
           ),
+        ),
 
-          const SizedBox(height: 20),
-
-          // Done button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () => context.go('/bill/${widget.billId}/summary'),
-              child: const Text('เสร็จสิ้น', style: TextStyle(fontSize: 16)),
+        // Bottom CTA
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: _slipUploaded
+                  ? _buildFinishedSection()
+                  : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _slipBytes != null
+                            ? AppColors.successGreen
+                            : AppColors.inputBorder,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: _slipBytes != null && !_uploadingSlip
+                          ? _confirmSlip
+                          : null,
+                      child: Text(
+                        _slipBytes == null
+                            ? 'กดเลือกสลิปด้านบนก่อน'
+                            : _uploadingSlip
+                                ? 'กำลังอัพโหลด...'
+                                : 'ยืนยันสลิป',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ),
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSlipUploadZone() {
+    return GestureDetector(
+      onTap: _uploadingSlip ? null : _pickSlip,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _slipBytes != null ? AppColors.successGreen : AppColors.inputBorder,
+            width: _slipBytes != null ? 2 : 1,
+          ),
+        ),
+        child: _slipBytes != null ? _buildSlipPreview() : _buildUploadPrompt(),
+      ),
+    );
+  }
+
+  Widget _buildUploadPrompt() {
+    return Column(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: AppColors.dimBlue,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: _uploadingSlip
+              ? const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                )
+              : const Icon(Icons.upload_file, color: AppColors.primaryBlue, size: 28),
+        ),
+        const SizedBox(height: 14),
+        const Text(
+          'อัพสลิปยืนยันการโอน',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textDark,
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'แตะเพื่อเลือกรูปสลิปจากแกลเลอรี',
+          style: TextStyle(fontSize: 13, color: AppColors.textGray),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSlipPreview() {
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.memory(
+            _slipBytes!,
+            height: 160,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          '✓ เลือกรูปแล้ว',
+          style: TextStyle(
+            color: AppColors.successGreen,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        GestureDetector(
+          onTap: _pickSlip,
+          child: const Text(
+            'เปลี่ยนรูป',
+            style: TextStyle(
+              color: AppColors.primaryBlue,
+              fontSize: 13,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSlipSuccessCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.successGreen.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.successGreen.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          if (_slipBytes != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(_slipBytes!, width: 56, height: 56, fit: BoxFit.cover),
+            ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'สลิปพร้อมยืนยัน',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'กดปุ่มด้านล่างเพื่อยืนยันการโอน',
+                  style: TextStyle(fontSize: 13, color: AppColors.textGray),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.check_circle, color: AppColors.successGreen, size: 28),
         ],
       ),
+    );
+  }
+
+  Widget _buildFinishedSection() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.successGreen.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.check_circle, color: AppColors.successGreen, size: 24),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'อัพสลิปเรียบร้อยแล้ว รอผู้รับตรวจสอบ',
+                  style: TextStyle(
+                    color: AppColors.successGreen,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: () => context.go('/bill/${widget.billId}/summary'),
+            child: const Text('เสร็จสิ้น',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          ),
+        ),
+      ],
     );
   }
 
@@ -370,7 +533,8 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
         children: [
           const Icon(Icons.qr_code, color: AppColors.textGray, size: 48),
           const SizedBox(height: 16),
-          const Text('No PromptPay number set', style: TextStyle(color: AppColors.textGray, fontSize: 16)),
+          const Text('No PromptPay number set',
+              style: TextStyle(color: AppColors.textGray, fontSize: 16)),
           const SizedBox(height: 24),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -386,15 +550,29 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     );
   }
 
-  Future<void> _pickAndUploadSlip() async {
+  Future<void> _pickSlip() async {
     try {
-      final picked = await _imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
       if (picked == null) return;
 
-      setState(() => _uploadingSlip = true);
-
       final bytes = await picked.readAsBytes();
-      final slipUrl = await uploadSlipToCloudinary(bytes);
+      if (!mounted) return;
+      setState(() => _slipBytes = bytes);
+    } catch (e) {
+      _showSnackBar('เลือกรูปไม่สำเร็จ');
+    }
+  }
+
+  Future<void> _confirmSlip() async {
+    if (_slipBytes == null || _uploadingSlip) return;
+
+    setState(() => _uploadingSlip = true);
+
+    try {
+      final slipUrl = await uploadSlipToCloudinary(_slipBytes!);
 
       if (_paymentId != null) {
         await ref.read(paymentServiceProvider).confirm(_paymentId!, slipUrl: slipUrl);
@@ -402,7 +580,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
 
       if (!mounted) return;
       setState(() { _uploadingSlip = false; _slipUploaded = true; });
-      _showSnackBar('อัพสลิปเรียบร้อยแล้ว');
+      _showSnackBar('ยืนยันสลิปเรียบร้อยแล้ว');
     } catch (e) {
       if (!mounted) return;
       setState(() => _uploadingSlip = false);
