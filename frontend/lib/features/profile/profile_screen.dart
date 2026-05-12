@@ -56,23 +56,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _submit() async {
     if (!_validate()) return;
+    if (!mounted) return;
 
     setState(() => _errorMessage = null);
     await ref.read(authProvider.notifier).updateProfile(
       displayName: _displayNameController.text.trim(),
       promptpayNumber: _promptpayController.text.trim(),
     );
+    if (!mounted) return;
+
     final authState = ref.read(authProvider);
     authState.when(
       data: (user) {
-        if (user != null) {
+        if (user != null && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Profile updated')),
           );
           setState(() => _isEditing = false);
         }
       },
-      error: (e, _) => setState(() => _errorMessage = e.toString()),
+      error: (e, _) {
+        if (mounted) setState(() => _errorMessage = e.toString());
+      },
       loading: () {},
     );
   }
