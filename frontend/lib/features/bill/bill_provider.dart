@@ -73,14 +73,19 @@ class BillItem {
 
   double get lineTotal => unitPrice * quantity;
 
-  factory BillItem.fromJson(Map<String, dynamic> json) => BillItem(
-    id: (json['id'] ?? json['Id'] ?? '').toString(),
-    billId: (json['bill_id'] ?? json['billId'] ?? json['BillId'] ?? '').toString(),
-    name: (json['name'] ?? json['Name'] ?? '').toString(),
-    quantity: (json['quantity'] ?? json['Quantity'] ?? 1) as int,
-    unitPrice: _toDouble(json['unit_price'] ?? json['unitPrice'] ?? json['UnitPrice']) ?? 0.0,
-    assignedTo: (json['assigned_to'] ?? json['assignedTo'] ?? json['AssignedTo'] as List<dynamic>?)?.cast<String>(),
-  );
+  factory BillItem.fromJson(Map<String, dynamic> json) {
+    // item_assigns comes from backend as array of {user_id: string} objects
+    final assigns = (json['item_assigns'] as List<dynamic>?) ?? [];
+    final assignedTo = assigns.map((a) => (a['user_id'] ?? a['userId'] ?? '') as String).toList();
+    return BillItem(
+      id: (json['id'] ?? json['Id'] ?? '').toString(),
+      billId: (json['bill_id'] ?? json['billId'] ?? json['BillId'] ?? '').toString(),
+      name: (json['name'] ?? json['Name'] ?? '').toString(),
+      quantity: (json['quantity'] ?? json['Quantity'] ?? 1) as int,
+      unitPrice: _toDouble(json['unit_price'] ?? json['unitPrice'] ?? json['UnitPrice']) ?? 0.0,
+      assignedTo: assignedTo,
+    );
+  }
 
   BillItem copyWith({
     String? id,

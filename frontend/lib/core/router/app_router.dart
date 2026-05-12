@@ -14,6 +14,8 @@ import '../../features/bill/edit_bill_screen.dart';
 import '../../features/assign/assign_screen.dart';
 import '../../features/invite/invite_screen.dart';
 import '../../features/invite/join_screen.dart';
+import '../../features/settlement/settlement_screen.dart';
+import '../../features/settlement/promptpay_screen.dart';
 import '../../features/splash/splash_screen.dart';
 
 /// Listens to authProvider and notifies GoRouter to re-run redirect
@@ -106,6 +108,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       // GoRoute(path: '/bill/:id/assign', builder: (_, __) => const Placeholder()),
       // GoRoute(path: '/bill/:id/settlement', builder: (_, __) => const Placeholder()),
       GoRoute(path: '/join', builder: (context, state) => const JoinScreen()),
+      GoRoute(
+        path: '/bill/:id/settlement',
+        builder: (context, state) =>
+            SettlementScreen(billId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/bill/:id/promptpay/:toUserId/:amount',
+        builder: (context, state) => PromptpayScreen(
+          billId: state.pathParameters['id']!,
+          toUserId: state.pathParameters['toUserId']!,
+          toUserName: state.uri.queryParameters['name'] ?? 'Unknown',
+          amount: double.tryParse(state.pathParameters['amount'] ?? '0') ?? 0,
+        ),
+      ),
     ],
   );
 });
