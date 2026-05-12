@@ -8,6 +8,7 @@ class Bill {
   final String name;
   final DateTime date;
   final String createdBy;
+  final String? paidBy;
   final String status;
   final String inviteCode;
   final DateTime createdAt;
@@ -15,12 +16,14 @@ class Bill {
   final double? vatPercent;
   final String? receiptImageUrl;
   final int memberCount;
+  final String? ownerPromptpay;
 
   const Bill({
     required this.id,
     required this.name,
     required this.date,
     required this.createdBy,
+    this.paidBy,
     required this.status,
     required this.inviteCode,
     required this.createdAt,
@@ -28,22 +31,25 @@ class Bill {
     this.vatPercent,
     this.receiptImageUrl,
     this.memberCount = 0,
+    this.ownerPromptpay,
   });
 
   bool get isActive => status.toLowerCase() == 'active';
 
   factory Bill.fromJson(Map<String, dynamic> json) => Bill(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    date: DateTime.parse(json['date'] as String),
-    createdBy: json['created_by'] as String,
-    status: json['status'] as String,
-    inviteCode: json['invite_code'] as String,
-    createdAt: DateTime.parse(json['created_at'] as String),
-    serviceChargePercent: _toDouble(json['service_charge_pct']),
-    vatPercent: _toDouble(json['vat_pct']),
-    receiptImageUrl: json['receipt_image_url'] as String?,
-    memberCount: json['member_count'] as int? ?? 0,
+    id: (json['id'] ?? json['Id'] ?? '').toString(),
+    name: (json['name'] ?? json['Name'] ?? '').toString(),
+    date: DateTime.tryParse((json['date'] ?? json['Date'] ?? '').toString()) ?? DateTime.now(),
+    createdBy: (json['created_by'] ?? json['createdBy'] ?? json['CreatedBy'] ?? '').toString(),
+    paidBy: (json['paid_by'] ?? json['paidBy'])?.toString(),
+    status: (json['status'] ?? json['Status'] ?? 'active').toString(),
+    inviteCode: (json['invite_code'] ?? json['inviteCode'] ?? json['InviteCode'] ?? '').toString(),
+    createdAt: DateTime.tryParse((json['created_at'] ?? json['createdAt'] ?? json['CreatedAt'] ?? '').toString()) ?? DateTime.now(),
+    serviceChargePercent: _toDouble(json['service_charge_pct'] ?? json['serviceChargePct'] ?? json['ServiceChargePct']),
+    vatPercent: _toDouble(json['vat_pct'] ?? json['vatPct'] ?? json['VatPct']),
+    receiptImageUrl: (json['receipt_image_url'] ?? json['receiptImageUrl'] ?? json['ReceiptImageUrl'])?.toString(),
+    memberCount: (json['member_count'] ?? json['memberCount'] ?? json['MemberCount'] ?? 0) as int,
+    ownerPromptpay: (json['owner_promptpay'] ?? json['ownerPromptpay'] ?? json['OwnerPromptpay'])?.toString(),
   );
 }
 
@@ -55,7 +61,8 @@ class BillItem {
   final String name;
   final int quantity;
   final double unitPrice;
-  final bool isPending; // true while optimistic (no confirmed server ID yet)
+  final bool isPending;
+  final List<String>? assignedTo;
 
   const BillItem({
     required this.id,
@@ -64,17 +71,24 @@ class BillItem {
     required this.quantity,
     required this.unitPrice,
     this.isPending = false,
+    this.assignedTo,
   });
 
   double get lineTotal => unitPrice * quantity;
 
-  factory BillItem.fromJson(Map<String, dynamic> json) => BillItem(
-    id: json['id'] as String,
-    billId: json['bill_id'] as String,
-    name: json['name'] as String,
-    quantity: json['quantity'] as int,
-    unitPrice: _toDouble(json['unit_price']) ?? 0.0,
-  );
+  factory BillItem.fromJson(Map<String, dynamic> json) {
+    // item_assigns comes from backend as array of {user_id: string} objects
+    final assigns = (json['item_assigns'] as List<dynamic>?) ?? [];
+    final assignedTo = assigns.map((a) => (a['user_id'] ?? a['userId'] ?? '') as String).toList();
+    return BillItem(
+      id: (json['id'] ?? json['Id'] ?? '').toString(),
+      billId: (json['bill_id'] ?? json['billId'] ?? json['BillId'] ?? '').toString(),
+      name: (json['name'] ?? json['Name'] ?? '').toString(),
+      quantity: (json['quantity'] ?? json['Quantity'] ?? 1) as int,
+      unitPrice: _toDouble(json['unit_price'] ?? json['unitPrice'] ?? json['UnitPrice']) ?? 0.0,
+      assignedTo: assignedTo,
+    );
+  }
 
   BillItem copyWith({
     String? id,
@@ -82,6 +96,7 @@ class BillItem {
     int? quantity,
     double? unitPrice,
     bool? isPending,
+    List<String>? assignedTo,
   }) => BillItem(
     id: id ?? this.id,
     billId: billId,
@@ -89,6 +104,7 @@ class BillItem {
     quantity: quantity ?? this.quantity,
     unitPrice: unitPrice ?? this.unitPrice,
     isPending: isPending ?? this.isPending,
+    assignedTo: assignedTo ?? this.assignedTo,
   );
 }
 
@@ -114,11 +130,12 @@ class BillListNotifier extends AsyncNotifier<List<Bill>> {
   }
 
   Future<void> refreshBills() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    state = state.whenData((data) => data); // preserve current data while loading
+    final fresh = await AsyncValue.guard(() async {
       final data = await ref.read(billServiceProvider).listBills();
       return data.map(Bill.fromJson).toList();
     });
+    state = fresh;
   }
 }
 

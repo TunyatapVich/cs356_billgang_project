@@ -37,6 +37,10 @@ class BillService {
     return response.data as Map<String, dynamic>;
   }
 
+  Future<void> setPayer({required String billId, required String payerId}) async {
+    await _dio.patch('/bills/$billId/payer', data: {'paid_by': payerId});
+  }
+
   Future<void> deleteBill(String billId) async {
     await _dio.delete('/bills/$billId');
   }
@@ -92,6 +96,22 @@ class BillService {
     required String itemId,
   }) async {
     await _dio.delete('/bills/$billId/items/$itemId');
+  }
+
+  Future<void> assignItem({
+    required String billId,
+    required String itemId,
+    required String userId,
+  }) async {
+    await _dio.post('/bills/$billId/items/$itemId/assign', data: {'user_id': userId});
+  }
+
+  Future<void> unassignItem({
+    required String billId,
+    required String itemId,
+    required String userId,
+  }) async {
+    await _dio.delete('/bills/$billId/items/$itemId/assign/$userId');
   }
 
   // ── OCR ────────────────────────────────────────────────────────────────────

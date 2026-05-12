@@ -54,8 +54,14 @@ dependencies:
   # QR code (PromptPay)
   qr_flutter: ^4.1.0
 
+  # QR / barcode scanner (modern, AGP 8+ compatible)
+  mobile_scanner: ^6.0.2
+
   # Image picker (camera + gallery for OCR)
   image_picker: ^1.1.2
+
+  # Loading skeleton
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

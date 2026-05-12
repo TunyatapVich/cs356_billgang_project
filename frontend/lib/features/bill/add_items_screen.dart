@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_colors.dart';
 import 'bill_provider.dart';
 
 class AddItemsScreen extends ConsumerStatefulWidget {
@@ -13,15 +14,6 @@ class AddItemsScreen extends ConsumerStatefulWidget {
 }
 
 class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const inputFill = Color(0xFFF2F4FC);
-  static const inputBorder = Color(0xFFDCDFEA);
-  static const errorRed = Color(0xFFD94848);
-
   final _nameController = TextEditingController();
   final _qtyController = TextEditingController(text: '1');
   final _priceController = TextEditingController();
@@ -85,30 +77,30 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
     final itemsState = ref.watch(billItemsProvider(widget.billId));
 
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        backgroundColor: bgLight,
+        backgroundColor: AppColors.bgLight,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
-          onPressed: () => context.go('/bills'),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
+          onPressed: () => context.go('/bill/${widget.billId}/edit'),
         ),
         title: const Text(
           'Add Items',
           style: TextStyle(
-            color: textDark,
+            color: AppColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => context.go('/bill/${widget.billId}/invite'),
+            onPressed: () => context.go('/bill/${widget.billId}/edit'),
             child: const Text(
               'Done',
               style: TextStyle(
-                color: primaryBlue,
+                color: AppColors.primaryBlue,
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
               ),
@@ -125,7 +117,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
               error: (e, _) => Center(
                 child: Text(
                   'Failed to load items: $e',
-                  style: const TextStyle(color: errorRed),
+                  style: const TextStyle(color: AppColors.errorRed),
                 ),
               ),
               data: (items) => items.isEmpty
@@ -143,12 +135,12 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.receipt_long, color: primaryBlue, size: 48),
+        const Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 48),
         const SizedBox(height: 16),
         const Text(
           'No items yet',
           style: TextStyle(
-            color: textDark,
+            color: AppColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -156,18 +148,18 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
         const SizedBox(height: 8),
         const Text(
           'Add items below or scan a receipt.',
-          style: TextStyle(color: textGray, fontSize: 13),
+          style: TextStyle(color: AppColors.textGray, fontSize: 13),
         ),
         const SizedBox(height: 24),
         OutlinedButton.icon(
           onPressed: () => context.go('/bill/${widget.billId}/ocr'),
-          icon: const Icon(Icons.document_scanner_outlined, color: primaryBlue),
+          icon: const Icon(Icons.document_scanner_outlined, color: AppColors.primaryBlue),
           label: const Text(
             'Scan Receipt',
-            style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold),
+            style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
           ),
           style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: primaryBlue),
+            side: const BorderSide(color: AppColors.primaryBlue),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -190,18 +182,18 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
               onPressed: () => context.go('/bill/${widget.billId}/ocr'),
               icon: const Icon(
                 Icons.document_scanner_outlined,
-                color: primaryBlue,
+                color: AppColors.primaryBlue,
                 size: 18,
               ),
               label: const Text(
                 'Scan Receipt',
                 style: TextStyle(
-                  color: primaryBlue,
+                  color: AppColors.primaryBlue,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: primaryBlue),
+                side: const BorderSide(color: AppColors.primaryBlue),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -226,7 +218,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
   Widget _buildAddPanel() {
     return Container(
       decoration: const BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         boxShadow: [
           BoxShadow(
             color: Color(0x0D000000),
@@ -248,7 +240,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
           const Text(
             'Add Item',
             style: TextStyle(
-              color: textDark,
+              color: AppColors.textDark,
               fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
@@ -261,7 +253,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
             const SizedBox(height: 8),
             Text(
               _addError!,
-              style: const TextStyle(color: errorRed, fontSize: 12),
+              style: const TextStyle(color: AppColors.errorRed, fontSize: 12),
             ),
           ],
           const SizedBox(height: 12),
@@ -270,7 +262,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
             height: 48,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
+                backgroundColor: AppColors.primaryBlue,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -311,20 +303,15 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
     return Row(
       children: [
         Expanded(
-          flex: 2,
-          child: _inputField(
-            controller: _qtyController,
-            hint: 'Qty',
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          ),
+          flex: 3,
+          child: _qtyStepper(),
         ),
         const SizedBox(width: 10),
         Expanded(
-          flex: 3,
+          flex: 4,
           child: _inputField(
             controller: _priceController,
-            hint: 'Unit price',
+            hint: 'Price',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
@@ -332,6 +319,69 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _qtyStepper() {
+    final qty = int.tryParse(_qtyController.text) ?? 1;
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: AppColors.inputFill,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.inputBorder),
+      ),
+      child: Row(
+        children: [
+          _stepperBtn(
+            icon: Icons.remove,
+            onTap: () {
+              if (qty > 1) {
+                _qtyController.text = (qty - 1).toString();
+              }
+            },
+          ),
+          Expanded(
+            child: TextField(
+              controller: _qtyController,
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: const TextStyle(
+                color: AppColors.textDark,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: 4),
+              ),
+            ),
+          ),
+          _stepperBtn(
+            icon: Icons.add,
+            onTap: () {
+              _qtyController.text = (qty + 1).toString();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepperBtn({required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE4E6FF),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: AppColors.primaryBlue, size: 18),
+      ),
     );
   }
 
@@ -344,9 +394,9 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
     return Container(
       height: 46,
       decoration: BoxDecoration(
-        color: inputFill,
+        color: AppColors.inputFill,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: inputBorder),
+        border: Border.all(color: AppColors.inputBorder),
       ),
       child: TextField(
         controller: controller,
@@ -359,7 +409,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
             vertical: 12,
           ),
           hintText: hint,
-          hintStyle: const TextStyle(color: textGray, fontSize: 14),
+          hintStyle: const TextStyle(color: AppColors.textGray, fontSize: 14),
         ),
       ),
     );
@@ -371,10 +421,6 @@ class _ItemCard extends StatelessWidget {
   final BillItem item;
   final VoidCallback onDelete;
 
-  static const primaryBlue = _AddItemsScreenState.primaryBlue;
-  static const cardWhite = _AddItemsScreenState.cardWhite;
-  static const textDark = _AddItemsScreenState.textDark;
-  static const textGray = _AddItemsScreenState.textGray;
 
   @override
   Widget build(BuildContext context) {
@@ -397,8 +443,8 @@ class _ItemCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: item.isPending
-              ? cardWhite.withValues(alpha: 0.7)
-              : cardWhite,
+              ? AppColors.cardWhite.withValues(alpha: 0.7)
+              : AppColors.cardWhite,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -417,7 +463,7 @@ class _ItemCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.fastfood_outlined,
-                  color: primaryBlue, size: 18),
+                  color: AppColors.primaryBlue, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -430,7 +476,7 @@ class _ItemCard extends StatelessWidget {
                         child: Text(
                           item.name,
                           style: const TextStyle(
-                            color: textDark,
+                            color: AppColors.textDark,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -443,7 +489,7 @@ class _ItemCard extends StatelessWidget {
                           height: 12,
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
-                            color: primaryBlue,
+                            color: AppColors.primaryBlue,
                           ),
                         ),
                     ],
@@ -451,7 +497,7 @@ class _ItemCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'x${item.quantity}  ·  ฿${item.unitPrice.toStringAsFixed(2)}',
-                    style: const TextStyle(color: textGray, fontSize: 12),
+                    style: const TextStyle(color: AppColors.textGray, fontSize: 12),
                   ),
                 ],
               ),
@@ -459,7 +505,7 @@ class _ItemCard extends StatelessWidget {
             Text(
               '฿${item.lineTotal.toStringAsFixed(2)}',
               style: const TextStyle(
-                color: primaryBlue,
+                color: AppColors.primaryBlue,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),

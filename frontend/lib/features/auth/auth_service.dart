@@ -18,6 +18,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> register(
     String email,
+    String phone,
     String password,
     String passwordConfirm,
   ) async {
@@ -25,10 +26,32 @@ class AuthService {
       '/auth/register',
       data: {
         'email': email,
+        'promptpay_number': phone,
         'password': password,
         'password_confirm': passwordConfirm,
       },
     );
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    String? displayName,
+    String? avatarUrl,
+    String? promptpayNumber,
+  }) async {
+    final response = await _dio.put(
+      '/auth/profile',
+      data: {
+        if (displayName != null) 'display_name': displayName,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+        if (promptpayNumber != null) 'promptpay_number': promptpayNumber,
+      },
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getProfile() async {
+    final response = await _dio.get('/auth/profile');
     return response.data as Map<String, dynamic>;
   }
 }

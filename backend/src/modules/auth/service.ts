@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { UserStatsService } from "../users/service";
 
 export class AuthService {
   static async registerUser(data: {
@@ -9,15 +10,22 @@ export class AuthService {
     promptpay_number?: string | null;
   }) {
     try {
+      // Auto-set display_name from email if not provided
+      const rawName = data.display_name;
+      const displayName = (rawName !== null && rawName !== undefined && rawName !== "")
+        ? rawName
+        : data.email.split('@')[0];
+
       const { password_hash, ...user } = await prisma.users.create({
         data: {
           email: data.email,
-          display_name: data.display_name,
+          display_name: displayName,
           avatar_url: data.avatar_url,
           promptpay_number: data.promptpay_number,
           password_hash: await Bun.password.hash(data.password),
         },
       });
+      await UserStatsService.onUserRegistered(user.id);
       return user;
     } catch (error: any) {
       if (error.code === "P2002") {

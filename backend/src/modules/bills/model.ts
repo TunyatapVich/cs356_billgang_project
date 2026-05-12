@@ -21,6 +21,9 @@ export const BillPatchPayload = t.Object({
 });
 export type BillPatchRequest = Static<typeof BillPatchPayload>;
 
+export const BillPayerPayload = t.Object({ paid_by: t.String() });
+export type BillPayerRequest = Static<typeof BillPayerPayload>;
+
 const ItemInput = t.Object({
   name: t.String(),
   quantity: t.Integer({ minimum: 1 }),

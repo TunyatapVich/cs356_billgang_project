@@ -2,6 +2,8 @@ import { prisma } from "../../db";
 import { decimalToNumber } from "../utils/decimal";
 import { minCashFlow, type Transfer } from "../utils/mincashflow";
 import { parseReceiptText, type ParsedItem } from "../utils/ocr";
+import { broadcast } from "../utils/broker";
+import { UserStatsService } from "../users/service";
 import type {
   BillCreateRequest,
   BillItemsRequest,
@@ -40,6 +42,7 @@ const createInviteCode = async () => {
 
 const serializeBill = (bill: any) => ({
   ...bill,
+  paid_by: bill.paid_by ?? null,
   service_charge_pct: decimalToNumber(bill.service_charge_pct),
   vat_pct: decimalToNumber(bill.vat_pct),
 });
@@ -138,6 +141,7 @@ export class BillService {
         },
       },
     });
+    await UserStatsService.onBillCreated(userid);
     return serializeBill(bill);
   }
 
@@ -211,6 +215,24 @@ export class BillService {
     return result.count > 0;
   }
 
+  static async assignItem(userid: string, billId: string, itemId: string, assignUserId: string) {
+    await this.assertMember(userid, billId);
+    await prisma.itemAssigns.upsert({
+      where: { bill_item_id_user_id: { bill_item_id: itemId, user_id: assignUserId } },
+      create: { bill_item_id: itemId, user_id: assignUserId },
+      update: {},
+    });
+    broadcast(billId, { type: "item_assigned", item_id: itemId, user_id: assignUserId });
+  }
+
+  static async unassignItem(userid: string, billId: string, itemId: string, assignUserId: string) {
+    await this.assertMember(userid, billId);
+    await prisma.itemAssigns.deleteMany({
+      where: { bill_item_id: itemId, user_id: assignUserId },
+    });
+    broadcast(billId, { type: "item_unassigned", item_id: itemId, user_id: assignUserId });
+  }
+
   static async runOcr(userid: string, billId: string, rawText: string, imageUrl?: string) {
     await this.assertMember(userid, billId);
     if (imageUrl) {
@@ -243,11 +265,16 @@ export class BillService {
     });
     if (!bill) throw new Error("NOT_FOUND");
 
-    await prisma.billMembers.upsert({
+    const existing = await prisma.billMembers.findUnique({
       where: { bill_id_user_id: { bill_id: bill.id, user_id: userid } },
-      update: {},
-      create: { bill_id: bill.id, user_id: userid, role: "member" },
     });
+
+    if (!existing) {
+      await prisma.billMembers.create({
+        data: { bill_id: bill.id, user_id: userid, role: "member" },
+      });
+      await UserStatsService.onBillJoined(userid);
+    }
 
     return this.getBill(userid, bill.id);
   }
@@ -274,6 +301,9 @@ export class BillService {
       },
     });
     if (!bill) throw new Error("NOT_FOUND");
+
+    // paid_by is the person who paid; if not set, defaults to created_by
+    const payerId = bill.paid_by ?? bill.created_by;
 
     const subtotal: Record<string, number> = {};
     for (const member of bill.bill_members) subtotal[member.user_id] = 0;
@@ -303,7 +333,7 @@ export class BillService {
     for (const userId of Object.keys(owed)) {
       balances[userId] = -owed[userId];
     }
-    balances[bill.created_by] = (balances[bill.created_by] ?? 0) + totalOwed;
+    balances[payerId] = (balances[payerId] ?? 0) + totalOwed;
 
     const transfers: Transfer[] = minCashFlow(balances);
 
@@ -328,6 +358,23 @@ export class BillService {
       })),
       bill: serializeBill({ ...bill, bill_items: undefined, bill_members: undefined }),
     };
+  }
+
+  static async setPayer(userid: string, billId: string, payerId: string) {
+    await this.assertMember(userid, billId);
+
+    // Verify payerId is a member of the bill
+    const member = await prisma.billMembers.findUnique({
+      where: { bill_id_user_id: { bill_id: billId, user_id: payerId } },
+    });
+    if (!member) throw new Error("FORBIDDEN");
+
+    const bill = await prisma.bills.update({
+      where: { id: billId },
+      data: { paid_by: payerId },
+    });
+    broadcast(billId, { type: "payer_set", paid_by: payerId });
+    return serializeBill(bill);
   }
 }
 
