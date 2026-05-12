@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/api/api_client.dart';
 
 class JoinScreen extends ConsumerStatefulWidget {
@@ -27,7 +27,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
   Object? _error;
   bool _loading = false;
   String? _billId;
-  QRViewController? _qrController;
+  MobileScannerController? _scannerController;
 
   @override
   void dispose() {
@@ -85,12 +85,13 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
     _joinByCode(code);
   }
 
-  void _onQRDetect(Barcode result) {
+  void _onBarcodeDetected(BarcodeCapture capture) {
     if (_loading) return;
-    final raw = result.code ?? '';
+    final barcode = capture.barcodes.firstOrNull;
+    final raw = barcode?.rawValue ?? '';
     final code = _extractCode(raw);
     if (code == null) return;
-    _qrController?.dispose();
+    _scannerController?.dispose();
     setState(() => _isScanning = false);
     _joinByCode(code);
   }
@@ -302,21 +303,12 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
   }
 
   Widget _buildScanner() {
+    _scannerController ??= MobileScannerController();
     return Stack(
       children: [
-        QRView(
-          key: UniqueKey(),
-          onQRViewCreated: (controller) {
-            _qrController = controller;
-            controller.scannedDataStream.listen(_onQRDetect);
-          },
-          overlay: QrScannerOverlayShape(
-            borderColor: primaryBlue,
-            borderRadius: 20,
-            borderLength: 30,
-            borderWidth: 3,
-            cutOutSize: 260,
-          ),
+        MobileScanner(
+          controller: _scannerController!,
+          onDetect: _onBarcodeDetected,
         ),
         Positioned(
           top: 16,
@@ -346,7 +338,8 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
             child: Center(
               child: TextButton(
                 onPressed: () {
-                  _qrController?.dispose();
+                  _scannerController?.dispose();
+                  _scannerController = null;
                   setState(() => _isScanning = false);
                 },
                 child: const Text(
