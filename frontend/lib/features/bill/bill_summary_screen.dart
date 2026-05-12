@@ -119,14 +119,12 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       child: Column(
         children: [
           _buildHero(bill),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           _buildMemberRow(bill),
-          const SizedBox(height: 20),
-          _buildTotalCard(bill),
+          const SizedBox(height: 16),
+          _buildBillCard(bill),
           const SizedBox(height: 16),
           _buildActionRow(),
-          const SizedBox(height: 20),
-          _buildItemList(),
         ],
       ),
     );
@@ -137,19 +135,19 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       clipBehavior: Clip.none,
       children: [
         Container(
-          width: 100,
-          height: 100,
+          width: 80,
+          height: 80,
           decoration: const BoxDecoration(
             color: Color(0xFFE4E6FF),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.receipt_long, color: primaryBlue, size: 44),
+          child: const Icon(Icons.receipt_long, color: primaryBlue, size: 36),
         ),
         Positioned(
           right: 0,
           bottom: 0,
           child: Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: bill.isActive
                   ? const Color(0xFF34C759)
@@ -163,7 +161,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                 ),
               ],
             ),
-            child: const Icon(Icons.check, color: Colors.white, size: 16),
+            child: const Icon(Icons.check, color: Colors.white, size: 14),
           ),
         ),
       ],
@@ -186,7 +184,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
               color: const Color(0xFFE4E6FF),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.group, color: primaryBlue, size: 20),
+            child: const Icon(Icons.group, color: primaryBlue, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -231,9 +229,8 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     );
   }
 
-  Widget _buildTotalCard(Bill bill) {
+  Widget _buildBillCard(Bill bill) {
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(20),
@@ -247,39 +244,97 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Subtotal', style: TextStyle(color: textGray, fontSize: 14)),
-              Text('฿${_subtotal.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Service ${bill.serviceChargePercent ?? 0}%', style: const TextStyle(color: textGray, fontSize: 14)),
-              Text('฿${_service.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('VAT ${bill.vatPercent ?? 0}%', style: const TextStyle(color: textGray, fontSize: 14)),
-              Text('฿${_vat.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
-            ],
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Total', style: TextStyle(color: textDark, fontSize: 16, fontWeight: FontWeight.bold)),
-              Text('฿${_total.toStringAsFixed(2)}', style: const TextStyle(color: primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)),
-            ],
+          // Items section
+          if (_items.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Row(
+                children: [
+                  const Text(
+                    'Items',
+                    style: TextStyle(
+                      color: textDark,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${_items.length} item${_items.length == 1 ? '' : 's'}',
+                    style: const TextStyle(color: textGray, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(indent: 20, endIndent: 20),
+            ..._items.map((item) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.name,
+                      style: const TextStyle(color: textDark, fontSize: 14),
+                    ),
+                  ),
+                  Text(
+                    'x${item.quantity}',
+                    style: const TextStyle(color: textGray, fontSize: 13),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    '฿${item.lineTotal.toStringAsFixed(2)}',
+                    style: const TextStyle(color: textDark, fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            )),
+            const Divider(indent: 20, endIndent: 20),
+          ],
+          // Totals section
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Subtotal', style: TextStyle(color: textGray, fontSize: 14)),
+                    Text('฿${_subtotal.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Service ${bill.serviceChargePercent ?? 0}%', style: const TextStyle(color: textGray, fontSize: 14)),
+                    Text('฿${_service.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('VAT ${bill.vatPercent ?? 0}%', style: const TextStyle(color: textGray, fontSize: 14)),
+                    Text('฿${_vat.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Total', style: TextStyle(color: textDark, fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text(
+                      '฿${_total.toStringAsFixed(2)}',
+                      style: const TextStyle(color: primaryBlue, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -359,56 +414,6 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildItemList() {
-    if (_items.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: cardWhite,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: inputBorder),
-        ),
-        child: Column(
-          children: [
-            Icon(Icons.receipt_long, color: textGray.withValues(alpha: 0.4), size: 40),
-            const SizedBox(height: 8),
-            const Text('No items yet', style: TextStyle(color: textGray, fontSize: 14)),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Items', style: TextStyle(color: textDark, fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        ..._items.map((item) => Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: cardWhite,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(item.name, style: const TextStyle(color: textDark, fontSize: 14)),
-              ),
-              Text('x${item.quantity}', style: const TextStyle(color: textGray, fontSize: 13)),
-              const SizedBox(width: 12),
-              Text('฿${item.lineTotal.toStringAsFixed(2)}', style: const TextStyle(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        )),
-      ],
     );
   }
 
