@@ -66,6 +66,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                     _buildPayerSection(assignState),
                     _buildMemberBar(assignState),
                     Expanded(child: _buildItemList(assignState)),
+                    _buildSaveBar(assignState),
                   ],
                 ),
     );
@@ -309,7 +310,17 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
         final item = assignState.items[index];
         final sel = notifier.isItemSelected(item);
         return GestureDetector(
-          onTap: () => notifier.toggleItem(widget.billId, index),
+          onTap: () {
+            final ok = notifier.toggleItem(index);
+            if (!ok && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Select a member first'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             margin: const EdgeInsets.only(bottom: 10),
@@ -377,6 +388,73 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSaveBar(AssignState assignState) {
+    final notifier = ref.read(assignProvider.notifier);
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        16,
+        24,
+        MediaQuery.of(context).padding.bottom + 16,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor:
+                assignState.saving ? AppColors.textGray : AppColors.primaryBlue,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          onPressed: assignState.saving
+              ? null
+              : () async {
+                  await notifier.saveAssignments(widget.billId);
+                  if (!mounted) return;
+                  final newState = ref.read(assignProvider);
+                  if (newState.error != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Save failed: ${newState.error}'),
+                        backgroundColor: AppColors.errorRed,
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Assignments saved'),
+                        backgroundColor: Color(0xFF34C759),
+                      ),
+                    );
+                  }
+                },
+          child: Text(
+            assignState.saving ? 'Saving...' : 'Save Assignments',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

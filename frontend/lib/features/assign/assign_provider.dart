@@ -16,36 +16,44 @@ class AssignMember {
 // ── Assign state ──────────────────────────────────────────────────────────────
 
 class AssignState {
-  final List<BillItem> items;
+  final List<BillItem> items; // current local state (may have unsaved changes)
+  final List<BillItem> originalItems; // last saved state from server
   final List<AssignMember> members;
   final int selectedMemberIndex;
-  final String? payerId; // who paid the bill
+  final String? payerId;
   final bool loading;
+  final bool saving; // true while saveAssignments is running
   final Object? error;
 
   const AssignState({
     this.items = const [],
+    this.originalItems = const [],
     this.members = const [],
     this.selectedMemberIndex = 0,
     this.payerId,
     this.loading = true,
+    this.saving = false,
     this.error,
   });
 
   AssignState copyWith({
     List<BillItem>? items,
+    List<BillItem>? originalItems,
     List<AssignMember>? members,
     int? selectedMemberIndex,
     String? payerId,
     bool? loading,
+    bool? saving,
     Object? error,
   }) {
     return AssignState(
       items: items ?? this.items,
+      originalItems: originalItems ?? this.originalItems,
       members: members ?? this.members,
       selectedMemberIndex: selectedMemberIndex ?? this.selectedMemberIndex,
       payerId: payerId ?? this.payerId,
       loading: loading ?? this.loading,
+      saving: saving ?? this.saving,
       error: error,
     );
   }
@@ -102,6 +110,7 @@ class AssignNotifier extends Notifier<AssignState> {
 
       state = state.copyWith(
         items: items,
+        originalItems: items,
         members: members,
         payerId: payerId,
         selectedMemberIndex: 0,
@@ -120,15 +129,15 @@ class AssignNotifier extends Notifier<AssignState> {
     }
   }
 
-  void toggleItem(String billId, int itemIndex) async {
+  /// Toggles item selection locally (no API call). Returns true if toggled.
+  bool toggleItem(int itemIndex) {
     final memberId = state.selectedMemberId;
-    if (memberId == null) return;
+    if (memberId == null) return false;
 
     final item = state.items[itemIndex];
-    final assigned = item.assignedTo ?? [];
+    final assigned = List<String>.from(item.assignedTo ?? []);
     final isCurrentlyAssigned = assigned.contains(memberId);
 
-    // Optimistic update
     state = state.copyWith(
       items: [
         for (var i = 0; i < state.items.length; i++)
@@ -142,34 +151,42 @@ class AssignNotifier extends Notifier<AssignState> {
             state.items[i],
       ],
     );
-
-    try {
-      if (isCurrentlyAssigned) {
-        await _billService.unassignItem(
-          billId: billId,
-          itemId: item.id,
-          userId: memberId,
-        );
-      } else {
-        await _billService.assignItem(
-          billId: billId,
-          itemId: item.id,
-          userId: memberId,
-        );
-      }
-    } catch (_) {
-      // Revert on failure
-      state = state.copyWith(
-        items: [
-          for (var i = 0; i < state.items.length; i++)
-            if (i == itemIndex) item else state.items[i],
-        ],
-      );
-    }
+    return true;
   }
 
   bool isItemSelected(BillItem item) =>
       item.assignedTo?.contains(state.selectedMemberId) ?? false;
+
+  /// Diffs current items against originalItems and syncs only changed assignments.
+  Future<void> saveAssignments(String billId) async {
+    state = state.copyWith(saving: true, error: null);
+
+    try {
+      for (var i = 0; i < state.items.length; i++) {
+        final current = state.items[i];
+        final original = state.originalItems.length > i ? state.originalItems[i] : null;
+        if (original == null) continue;
+
+        final currentSet = Set<String>.from(current.assignedTo ?? []);
+        final originalSet = Set<String>.from(original.assignedTo ?? []);
+
+        if (currentSet.difference(originalSet).isNotEmpty) {
+          for (final userId in currentSet.difference(originalSet)) {
+            await _billService.assignItem(billId: billId, itemId: current.id, userId: userId);
+          }
+        }
+        if (originalSet.difference(currentSet).isNotEmpty) {
+          for (final userId in originalSet.difference(currentSet)) {
+            await _billService.unassignItem(billId: billId, itemId: current.id, userId: userId);
+          }
+        }
+      }
+
+      state = state.copyWith(saving: false, originalItems: List.from(state.items));
+    } catch (e) {
+      state = state.copyWith(saving: false, error: e);
+    }
+  }
 
   void setPayer(String billId, String payerId) async {
     state = state.copyWith(payerId: payerId);
