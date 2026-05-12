@@ -155,12 +155,6 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
         ),
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.textGray,
-            width: 2,
-          ),
-        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
