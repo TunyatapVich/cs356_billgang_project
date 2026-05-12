@@ -15,7 +15,7 @@ String get _baseUrl {
 String get cloudinaryCloudName {
   const cloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME', defaultValue: '');
   if (cloudName.isEmpty) {
-    return 'ce514272ec89202990dbde5ac7eedf386b';
+    return 'affea2eece1afb04bd3f76ccf7eb10'; // from console URL (c- prefix stripped)
   }
   return cloudName;
 }
