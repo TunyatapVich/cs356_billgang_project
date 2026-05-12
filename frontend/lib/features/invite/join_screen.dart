@@ -32,7 +32,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
   @override
   void dispose() {
     _codeController.dispose();
-    _qrController?.dispose();
+    _scannerController?.dispose();
     super.dispose();
   }
 
