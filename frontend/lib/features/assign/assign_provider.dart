@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../auth/auth_provider.dart';
 import '../bill/bill_provider.dart';
 import '../bill/bill_service.dart';
 import '../../core/socket/socket_client.dart';
@@ -84,7 +85,7 @@ class AssignNotifier extends Notifier<AssignState> {
           .toList();
 
       final membersRaw = (data['members'] as List<dynamic>?) ?? [];
-      final members = membersRaw.cast<Map<String, dynamic>>().map((m) {
+      var members = membersRaw.cast<Map<String, dynamic>>().map((m) {
         final user = m['user'] as Map<String, dynamic>? ?? {};
         final displayName =
             (user['display_name'] ?? user['email'] ?? 'U') as String;
@@ -95,7 +96,19 @@ class AssignNotifier extends Notifier<AssignState> {
           name: displayName,
           avatar: initials,
         );
-      }).toList();
+      }).where((m) => m.id.isNotEmpty).toList();
+
+      // Fallback: API should always include the current user as a member,
+      // but if parsing fails or the list is empty, synthesise an entry so
+      // the user can still assign items to themselves.
+      if (members.isEmpty) {
+        final currentUser = ref.read(authProvider).value;
+        if (currentUser != null) {
+          final name = currentUser.displayName ?? currentUser.email;
+          final avatar = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+          members = [AssignMember(id: currentUser.id, name: name, avatar: avatar)];
+        }
+      }
 
       // paid_by comes from the serialized bill; fall back to created_by for new bills
       final billData = data['bill'] as Map<String, dynamic>?;
