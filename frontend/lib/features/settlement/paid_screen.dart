@@ -38,6 +38,8 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   @override
   void initState() {
     super.initState();
+    // DEBUG
+    print('[PAID] initState - toUserId: ${widget.toUserId}, toUserName: ${widget.toUserName}, amount: ${widget.amount}');
     _qrData = widget.qrData;
     _fetchedToUserName = widget.toUserName;
     if (_qrData == null) {
@@ -50,7 +52,9 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   Future<void> _loadQrData() async {
     setState(() { _loading = true; _error = null; });
     try {
+      print('[PAID] _loadQrData called');
       final currentUser = ref.read(authProvider).value;
+      print('[PAID] currentUser: ${currentUser?.id}');
       if (currentUser == null) throw Exception('Not authenticated');
       final result = await ref.read(paymentServiceProvider).create(
         billId: widget.billId,
