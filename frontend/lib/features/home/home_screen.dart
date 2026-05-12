@@ -47,7 +47,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.link, color: primaryBlue),
+            icon: const Icon(Icons.group_add, color: primaryBlue),
             tooltip: 'Join Bill',
             onPressed: () => context.go('/join'),
           ),

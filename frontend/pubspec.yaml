@@ -54,6 +54,9 @@ dependencies:
   # QR code (PromptPay)
   qr_flutter: ^4.1.0
 
+  # QR / barcode scanner (AVFoundation-based, no MLKit conflict)
+  qr_code_scanner: ^1.0.1
+
   # Image picker (camera + gallery for OCR)
   image_picker: ^1.1.2
 
