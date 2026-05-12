@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_colors.dart';
 import '../bill/bill_provider.dart';
 import '../bill/bill_service.dart';
 
@@ -13,14 +14,6 @@ class AssignScreen extends ConsumerStatefulWidget {
 }
 
 class _AssignScreenState extends ConsumerState<AssignScreen> {
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const inputBorder = Color(0xFFDCDFEA);
-  static const selectedColor = Color(0xFF34C759);
-  static const dimColor = Color(0xFFE4E6FF);
 
   List<BillItem> _items = [];
   List<_Member> _members = [];
@@ -121,25 +114,25 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        backgroundColor: bgLight,
+        backgroundColor: AppColors.bgLight,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
           onPressed: () => context.go('/bill/${widget.billId}/summary'),
         ),
         title: const Text(
           'Assign',
-          style: TextStyle(color: textDark, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(color: AppColors.textDark, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         actions: [
           TextButton(
             onPressed: () => context.go('/bill/${widget.billId}/summary'),
             child: const Text(
               'Done',
-              style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 15),
+              style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
         ],
@@ -164,10 +157,10 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
         children: [
           const Icon(Icons.error_outline, color: Colors.red, size: 42),
           const SizedBox(height: 12),
-          Text(_error.toString(), style: const TextStyle(color: textGray)),
+          Text(_error.toString(), style: const TextStyle(color: AppColors.textGray)),
           const SizedBox(height: 16),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: primaryBlue, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
             onPressed: _loadData,
             child: const Text('Try Again'),
           ),
@@ -180,8 +173,8 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: const BoxDecoration(
-        color: cardWhite,
-        border: Border(bottom: BorderSide(color: inputBorder)),
+        color: AppColors.cardWhite,
+        border: Border(bottom: BorderSide(color: AppColors.inputBorder)),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -201,10 +194,10 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: sel ? dimColor : const Color(0xFFF2F4FC),
+                        color: sel ? AppColors.dimBlue : const Color(0xFFF2F4FC),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: sel ? primaryBlue : inputBorder,
+                          color: sel ? AppColors.primaryBlue : AppColors.inputBorder,
                           width: sel ? 2.5 : 1,
                         ),
                       ),
@@ -212,7 +205,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                         child: Text(
                           m.avatar,
                           style: TextStyle(
-                            color: sel ? primaryBlue : textGray,
+                            color: sel ? AppColors.primaryBlue : AppColors.textGray,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -223,7 +216,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                     Text(
                       m.name,
                       style: TextStyle(
-                        color: sel ? primaryBlue : textGray,
+                        color: sel ? AppColors.primaryBlue : AppColors.textGray,
                         fontSize: 12,
                         fontWeight: sel ? FontWeight.bold : FontWeight.normal,
                       ),
@@ -244,9 +237,9 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.receipt_long, color: textGray.withValues(alpha: 0.4), size: 48),
+            Icon(Icons.receipt_long, color: AppColors.textGray.withValues(alpha: 0.4), size: 48),
             const SizedBox(height: 12),
-            const Text('No items yet', style: TextStyle(color: textGray)),
+            const Text('No items yet', style: TextStyle(color: AppColors.textGray)),
           ],
         ),
       );
@@ -265,10 +258,10 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: sel ? const Color(0xFFE8FDF0) : cardWhite,
+              color: sel ? const Color(0xFFE8FDF0) : AppColors.cardWhite,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: sel ? selectedColor.withValues(alpha: 0.4) : inputBorder,
+                color: sel ? AppColors.selectedGreen.withValues(alpha: 0.4) : AppColors.inputBorder,
               ),
             ),
             child: Row(
@@ -278,10 +271,10 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                   width: 22,
                   height: 22,
                   decoration: BoxDecoration(
-                    color: sel ? selectedColor : Colors.transparent,
+                    color: sel ? AppColors.selectedGreen : Colors.transparent,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: sel ? selectedColor : textGray.withValues(alpha: 0.4),
+                      color: sel ? AppColors.selectedGreen : AppColors.textGray.withValues(alpha: 0.4),
                       width: 1.5,
                     ),
                   ),
@@ -295,7 +288,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                       Text(
                         item.name,
                         style: TextStyle(
-                          color: sel ? selectedColor : textDark,
+                          color: sel ? AppColors.selectedGreen : AppColors.textDark,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -303,7 +296,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                       const SizedBox(height: 2),
                       Text(
                         'x${item.quantity}  ·  ฿${item.unitPrice.toStringAsFixed(0)}',
-                        style: const TextStyle(color: textGray, fontSize: 12),
+                        style: const TextStyle(color: AppColors.textGray, fontSize: 12),
                       ),
                     ],
                   ),
@@ -311,7 +304,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                 Text(
                   '฿${item.lineTotal.toStringAsFixed(0)}',
                   style: TextStyle(
-                    color: sel ? selectedColor : primaryBlue,
+                    color: sel ? AppColors.selectedGreen : AppColors.primaryBlue,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_colors.dart';
 import 'bill_provider.dart';
 import 'bill_service.dart';
 
@@ -13,13 +14,6 @@ class BillSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const inputBorder = Color(0xFFDCDFEA);
-  static const errorRed = Color(0xFFD94848);
 
   Bill? _bill;
   List<BillItem> _items = [];
@@ -67,19 +61,19 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        backgroundColor: bgLight,
+        backgroundColor: AppColors.bgLight,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
           onPressed: () => context.go('/'),
         ),
         title: const Text(
           'Bill Summary',
           style: TextStyle(
-            color: textDark,
+            color: AppColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -98,12 +92,12 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, color: errorRed, size: 42),
+          const Icon(Icons.error_outline, color: AppColors.errorRed, size: 42),
           const SizedBox(height: 12),
-          Text(_error.toString(), style: const TextStyle(color: textGray)),
+          Text(_error.toString(), style: const TextStyle(color: AppColors.textGray)),
           const SizedBox(height: 16),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: primaryBlue, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
             onPressed: _loadBill,
             child: const Text('Try Again'),
           ),
@@ -141,7 +135,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
             color: Color(0xFFE4E6FF),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.receipt_long, color: primaryBlue, size: 36),
+          child: const Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 36),
         ),
         Positioned(
           right: 0,
@@ -151,11 +145,11 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
             decoration: BoxDecoration(
               color: bill.isActive
                   ? const Color(0xFF34C759)
-                  : textGray.withValues(alpha: 0.5),
+                  : AppColors.textGray.withValues(alpha: 0.5),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: (bill.isActive ? const Color(0xFF34C759) : textGray).withValues(alpha: 0.3),
+                  color: (bill.isActive ? const Color(0xFF34C759) : AppColors.textGray).withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -172,9 +166,9 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: inputBorder),
+        border: Border.all(color: AppColors.inputBorder),
       ),
       child: Row(
         children: [
@@ -184,7 +178,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
               color: const Color(0xFFE4E6FF),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.group, color: primaryBlue, size: 18),
+            child: const Icon(Icons.group, color: AppColors.primaryBlue, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -194,7 +188,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                 Text(
                   bill.name,
                   style: const TextStyle(
-                    color: textDark,
+                    color: AppColors.textDark,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -202,7 +196,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '${bill.memberCount} member${bill.memberCount == 1 ? '' : 's'}  ·  ${_formatDate(bill.date)}',
-                  style: const TextStyle(color: textGray, fontSize: 13),
+                  style: const TextStyle(color: AppColors.textGray, fontSize: 13),
                 ),
               ],
             ),
@@ -212,13 +206,13 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
             decoration: BoxDecoration(
               color: bill.isActive
                   ? const Color(0xFF34C759).withValues(alpha: 0.1)
-                  : textGray.withValues(alpha: 0.1),
+                  : AppColors.textGray.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               bill.isActive ? 'Active' : 'Settled',
               style: TextStyle(
-                color: bill.isActive ? const Color(0xFF34C759) : textGray,
+                color: bill.isActive ? const Color(0xFF34C759) : AppColors.textGray,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -232,7 +226,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   Widget _buildBillCard(Bill bill) {
     return Container(
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -253,7 +247,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                   const Text(
                     'Items',
                     style: TextStyle(
-                      color: textDark,
+                      color: AppColors.textDark,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -261,7 +255,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                   const Spacer(),
                   Text(
                     '${_items.length} item${_items.length == 1 ? '' : 's'}',
-                    style: const TextStyle(color: textGray, fontSize: 13),
+                    style: const TextStyle(color: AppColors.textGray, fontSize: 13),
                   ),
                 ],
               ),
@@ -274,17 +268,17 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                   Expanded(
                     child: Text(
                       item.name,
-                      style: const TextStyle(color: textDark, fontSize: 14),
+                      style: const TextStyle(color: AppColors.textDark, fontSize: 14),
                     ),
                   ),
                   Text(
                     'x${item.quantity}',
-                    style: const TextStyle(color: textGray, fontSize: 13),
+                    style: const TextStyle(color: AppColors.textGray, fontSize: 13),
                   ),
                   const SizedBox(width: 16),
                   Text(
                     '฿${item.lineTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(color: textDark, fontSize: 14, fontWeight: FontWeight.w600),
+                    style: const TextStyle(color: AppColors.textDark, fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -299,24 +293,24 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Subtotal', style: TextStyle(color: textGray, fontSize: 14)),
-                    Text('฿${_subtotal.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
+                    const Text('Subtotal', style: TextStyle(color: AppColors.textGray, fontSize: 14)),
+                    Text('฿${_subtotal.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Service ${bill.serviceChargePercent ?? 0}%', style: const TextStyle(color: textGray, fontSize: 14)),
-                    Text('฿${_service.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
+                    Text('Service ${bill.serviceChargePercent ?? 0}%', style: const TextStyle(color: AppColors.textGray, fontSize: 14)),
+                    Text('฿${_service.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('VAT ${bill.vatPercent ?? 0}%', style: const TextStyle(color: textGray, fontSize: 14)),
-                    Text('฿${_vat.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
+                    Text('VAT ${bill.vatPercent ?? 0}%', style: const TextStyle(color: AppColors.textGray, fontSize: 14)),
+                    Text('฿${_vat.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
                   ],
                 ),
                 const Padding(
@@ -326,10 +320,10 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total', style: TextStyle(color: textDark, fontSize: 16, fontWeight: FontWeight.bold)),
+                    const Text('Total', style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold)),
                     Text(
                       '฿${_total.toStringAsFixed(2)}',
-                      style: const TextStyle(color: primaryBlue, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: AppColors.primaryBlue, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -348,7 +342,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -364,7 +358,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
         children: [
           const Text(
             'Per Person',
-            style: TextStyle(color: textDark, fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           ...members.map((m) => Padding(
@@ -375,21 +369,21 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: dimColor,
+                    color: AppColors.dimBlue,
                     shape: BoxShape.circle,
-                    border: Border.all(color: inputBorder),
+                    border: Border.all(color: AppColors.inputBorder),
                   ),
                   child: Center(
-                    child: Text(m['avatar']!, style: const TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
+                    child: Text(m['avatar']!, style: const TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(m['name']!, style: const TextStyle(color: textDark, fontSize: 14)),
+                  child: Text(m['name']!, style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
                 ),
                 Text(
                   '฿${_total.toStringAsFixed(2)}',
-                  style: const TextStyle(color: primaryBlue, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: AppColors.primaryBlue, fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -398,10 +392,10 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total', style: TextStyle(color: textDark, fontSize: 15, fontWeight: FontWeight.bold)),
+              const Text('Total', style: TextStyle(color: AppColors.textDark, fontSize: 15, fontWeight: FontWeight.bold)),
               Text(
                 '฿${_total.toStringAsFixed(2)}',
-                style: const TextStyle(color: primaryBlue, fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: AppColors.primaryBlue, fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -410,7 +404,6 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     );
   }
 
-  static const dimColor = Color(0xFFE4E6FF);
 
   Widget _buildPayButton() {
     return SizedBox(
@@ -418,7 +411,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       height: 52,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
+          backgroundColor: AppColors.primaryBlue,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

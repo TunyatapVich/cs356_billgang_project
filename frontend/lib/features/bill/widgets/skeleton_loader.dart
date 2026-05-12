@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../../core/theme/app_colors.dart';
 
 class SkeletonLoader extends StatelessWidget {
   const SkeletonLoader({super.key});
 
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
   static const skeletonGray = Color(0xFFE8EBF4);
 
   @override
@@ -40,7 +39,7 @@ class SkeletonLoader extends StatelessWidget {
       width: double.infinity,
       height: 96,
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
       ),
     );
@@ -50,7 +49,7 @@ class SkeletonLoader extends StatelessWidget {
     return Container(
       height: 52,
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(14),
       ),
     );
@@ -61,7 +60,7 @@ class SkeletonLoader extends StatelessWidget {
       width: 110,
       height: 20,
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(6),
       ),
     );
@@ -71,7 +70,7 @@ class SkeletonLoader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

@@ -2,6 +2,7 @@ import 'package:cs356_billgang/features/bill/bill_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_colors.dart';
 
 class CreateBillScreen extends ConsumerStatefulWidget {
   const CreateBillScreen({super.key});
@@ -11,15 +12,6 @@ class CreateBillScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
-  // ── สี ──────────────────────────────────────────────────────────────────
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const inputFill = Color(0xFFF2F4FC);
-  static const inputBorder = Color(0xFFDCDFEA);
-  static const errorRed = Color(0xFFD94848);
   String? _errorMessage;
 
   Future<void> _creatbill() async {
@@ -43,26 +35,26 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        backgroundColor: bgLight,
+        backgroundColor: AppColors.bgLight,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'New Bill',
           style: TextStyle(
-            color: textDark,
+            color: AppColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.more_vert, color: textDark),
+            icon: const Icon(Icons.more_vert, color: AppColors.textDark),
             onPressed: () {},
           ),
         ],
@@ -81,7 +73,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
             if (_errorMessage != null) ...[
               Text(
                 _errorMessage!,
-                style: const TextStyle(color: errorRed, fontSize: 12),
+                style: const TextStyle(color: AppColors.errorRed, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -103,7 +95,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
           top: 20,
           left: 40,
           right: 40,
-          child: SizedBox(height: 2, child: ColoredBox(color: inputFill)),
+          child: SizedBox(height: 2, child: ColoredBox(color: AppColors.inputFill)),
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -134,10 +126,10 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
       children: [
         CircleAvatar(
           radius: 22,
-          backgroundColor: isActive ? primaryBlue : inputFill,
+          backgroundColor: isActive ? AppColors.primaryBlue : AppColors.inputFill,
           child: Icon(
             icon,
-            color: isActive ? Colors.white : textGray,
+            color: isActive ? Colors.white : AppColors.textGray,
             size: 20,
           ),
         ),
@@ -145,7 +137,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
         Text(
           label,
           style: TextStyle(
-            color: isActive ? primaryBlue : textGray,
+            color: isActive ? AppColors.primaryBlue : AppColors.textGray,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             fontSize: 12,
           ),
@@ -159,7 +151,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -181,7 +173,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                   color: const Color(0xFFE4E6FF),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.receipt_long, color: primaryBlue),
+                child: const Icon(Icons.receipt_long, color: AppColors.primaryBlue),
               ),
               const SizedBox(width: 16),
               const Expanded(
@@ -191,7 +183,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                     Text(
                       'Bill Details',
                       style: TextStyle(
-                        color: textDark,
+                        color: AppColors.textDark,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -200,7 +192,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                     Text(
                       'Enter the information for the new bill.',
                       style: TextStyle(
-                        color: textGray,
+                        color: AppColors.textGray,
                         fontSize: 13,
                         height: 1.4,
                       ),
@@ -218,7 +210,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
             label: 'Date',
             hint: 'Oct 24, 2023',
             prefixIcon: Icons.calendar_today_outlined,
-            hintColor: textDark,
+            hintColor: AppColors.textDark,
           ),
           const SizedBox(height: 16),
 
@@ -230,7 +222,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                 child: _buildInputField(
                   label: 'Service Charge (%)',
                   hint: '10',
-                  hintColor: textDark,
+                  hintColor: AppColors.textDark,
                 ),
               ),
               const SizedBox(width: 16),
@@ -238,7 +230,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                 child: _buildInputField(
                   label: 'VAT (%)',
                   hint: 'abc',
-                  hintColor: textDark,
+                  hintColor: AppColors.textDark,
                   isError: true,
                   errorText: 'Invalid input',
                 ),
@@ -264,7 +256,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
         Text(
           label,
           style: const TextStyle(
-            color: textGray,
+            color: AppColors.textGray,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -273,9 +265,9 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: inputFill,
+            color: AppColors.inputFill,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isError ? errorRed : inputBorder),
+            border: Border.all(color: isError ? AppColors.errorRed : AppColors.inputBorder),
           ),
           child: TextField(
             decoration: InputDecoration(
@@ -286,14 +278,14 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
               ),
               hintText: hint,
               hintStyle: TextStyle(
-                color: hintColor ?? textGray.withValues(alpha: 0.5),
+                color: hintColor ?? AppColors.textGray.withValues(alpha: 0.5),
                 fontSize: 15,
                 fontWeight: hintColor != null
                     ? FontWeight.w600
                     : FontWeight.normal,
               ),
               prefixIcon: prefixIcon != null
-                  ? Icon(prefixIcon, color: textGray, size: 20)
+                  ? Icon(prefixIcon, color: AppColors.textGray, size: 20)
                   : null,
             ),
           ),
@@ -302,11 +294,11 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.error_outline, color: errorRed, size: 14),
+              const Icon(Icons.error_outline, color: AppColors.errorRed, size: 14),
               const SizedBox(width: 4),
               Text(
                 errorText,
-                style: const TextStyle(color: errorRed, fontSize: 11),
+                style: const TextStyle(color: AppColors.errorRed, fontSize: 11),
               ),
             ],
           ),
@@ -338,7 +330,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                 Text(
                   '99.9%',
                   style: TextStyle(
-                    color: primaryBlue,
+                    color: AppColors.primaryBlue,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
@@ -355,7 +347,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             decoration: BoxDecoration(
-              color: cardWhite,
+              color: AppColors.cardWhite,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -383,7 +375,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                         child: Text(
                           '+6',
                           style: TextStyle(
-                            color: primaryBlue,
+                            color: AppColors.primaryBlue,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -395,7 +387,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                 const SizedBox(height: 8),
                 const Text(
                   'Recent Splits',
-                  style: TextStyle(color: textGray, fontSize: 13),
+                  style: TextStyle(color: AppColors.textGray, fontSize: 13),
                 ),
               ],
             ),
@@ -424,7 +416,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
       height: 56,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
+          backgroundColor: AppColors.primaryBlue,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
