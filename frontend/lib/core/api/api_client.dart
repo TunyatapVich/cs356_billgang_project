@@ -11,6 +11,28 @@ String get _baseUrl {
   return 'http://localhost:3000';
 }
 
+String get cloudinaryCloudName {
+  // Injected via --dart-define for security (CI/CD/prod). Fallback to placeholder for dev.
+  // Example: flutter run --dart-define=CLOUDINARY_CLOUD_NAME=xxx
+  const cloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME', defaultValue: '');
+  if (cloudName.isEmpty) {
+    throw Exception('CLOUDINARY_CLOUD_NAME not configured. Run with --dart-define=CLOUDINARY_CLOUD_NAME=your_cloud_name');
+  }
+  return cloudName;
+}
+
+// Cloudinary upload preset — injected via --dart-define
+String get cloudinaryUploadPreset {
+  const preset = String.fromEnvironment('CLOUDINARY_UPLOAD_PRESET', defaultValue: '');
+  if (preset.isEmpty) {
+    throw Exception('CLOUDINARY_UPLOAD_PRESET not configured. Run with --dart-define=CLOUDINARY_UPLOAD_PRESET=your_preset');
+  }
+  return preset;
+}
+
+String get cloudinaryUploadUrl =>
+    'https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload';
+
 // Unauthenticated Dio — for login / register (no token needed)
 // Same idea as: export const axios = axios.create({ baseURL }) in Next.js
 final dioProvider = Provider<Dio>((ref) {

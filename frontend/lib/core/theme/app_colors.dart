@@ -12,6 +12,7 @@ class AppColors {
   static const inputBorder = Color(0xFFDCDFEA);
   static const errorRed = Color(0xFFE84545);
   static const selectedGreen = Color(0xFF34C759);
+  static const successGreen = Color(0xFF27AE60);
   static const thaiQRBlue = Color(0xFF00427a);
   static const dimBlue = Color(0xFFE4E6FF);
 }

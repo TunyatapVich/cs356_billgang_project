@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
@@ -42,3 +43,26 @@ class PaymentService {
 final paymentServiceProvider = Provider<PaymentService>((ref) {
   return PaymentService(ref.read(authDioProvider));
 });
+
+// Cloudinary upload helper
+Future<String> uploadSlipToCloudinary(Uint8List imageBytes) async {
+  final dio = Dio();
+  final formData = FormData.fromMap({
+    'file': MultipartFile.fromBytes(
+      imageBytes,
+      filename: 'slip_${DateTime.now().millisecondsSinceEpoch}.jpg',
+    ),
+    'upload_preset': cloudinaryUploadPreset,
+  });
+
+  final response = await dio.post(
+    cloudinaryUploadUrl,
+    data: formData,
+    options: Options(
+      headers: {'Content-Type': 'multipart/form-data'},
+    ),
+  );
+
+  final data = response.data as Map<String, dynamic>;
+  return data['secure_url'] as String;
+}
