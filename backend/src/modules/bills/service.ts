@@ -42,7 +42,7 @@ const createInviteCode = async () => {
 
 const serializeBill = (bill: any) => ({
   ...bill,
-  paid_by: bill.paid_by ?? null,
+  paid_by: (bill.paid_by === null || bill.paid_by === undefined || bill.paid_by === 'null') ? null : bill.paid_by,
   service_charge_pct: decimalToNumber(bill.service_charge_pct),
   vat_pct: decimalToNumber(bill.vat_pct),
 });
@@ -304,7 +304,8 @@ export class BillService {
     if (!bill) throw new Error("NOT_FOUND");
 
     // paid_by is the person who paid; if not set, defaults to created_by
-    const payerId = bill.paid_by ?? bill.created_by;
+    const rawPayerId = bill.paid_by;
+    const payerId = (rawPayerId === null || rawPayerId === undefined || rawPayerId === 'null') ? bill.created_by : rawPayerId;
 
     const subtotal: Record<string, number> = {};
     for (const member of bill.bill_members) subtotal[member.user_id] = 0;
@@ -362,13 +363,8 @@ export class BillService {
   }
 
   static async setPayer(userid: string, billId: string, payerId: string) {
+    // Verify requesting user is a member
     await this.assertMember(userid, billId);
-
-    // Verify payerId is a member of the bill
-    const member = await prisma.billMembers.findUnique({
-      where: { bill_id_user_id: { bill_id: billId, user_id: payerId } },
-    });
-    if (!member) throw new Error("FORBIDDEN");
 
     const bill = await prisma.bills.update({
       where: { id: billId },

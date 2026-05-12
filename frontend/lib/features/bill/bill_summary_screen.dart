@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/socket/socket_client.dart';
+import '../../core/storage/token_storage.dart';
 import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import 'bill_provider.dart';
@@ -15,6 +18,8 @@ class BillSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
+  SocketClient? _socket;
+  StreamSubscription? _socketSub;
 
   Bill? _bill;
   List<BillItem> _items = [];
@@ -27,6 +32,35 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   void initState() {
     super.initState();
     _loadBill();
+    _connectSocket();
+  }
+
+  @override
+  void dispose() {
+    _socketSub?.cancel();
+    _socket?.disconnect();
+    super.dispose();
+  }
+
+  Future<void> _connectSocket() async {
+    final token = await TokenStorage.read() ?? '';
+    _socket = SocketClient();
+    _socket!.connect(widget.billId, token);
+    _socketSub = _socket!.stream.listen(_handleSocketEvent);
+  }
+
+  void _handleSocketEvent(Map<String, dynamic> event) {
+    final type = event['type'] as String?;
+    if (type == 'payer_set') {
+      final newPayerId = event['paid_by'] as String?;
+      if (newPayerId != null && mounted) {
+        setState(() {
+          _bill = _bill?.copyWith(paidBy: newPayerId);
+        });
+      }
+    } else if (type == 'bill_updated') {
+      _loadBill();
+    }
   }
 
   Future<void> _loadBill() async {
