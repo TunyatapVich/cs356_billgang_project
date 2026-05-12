@@ -47,6 +47,11 @@ class _BillListScreenState extends ConsumerState<BillListScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.link, color: primaryBlue),
+            tooltip: 'Join Bill',
+            onPressed: () => context.go('/join'),
+          ),
+          IconButton(
             icon: const Icon(Icons.person_outline, color: primaryBlue),
             onPressed: () => context.go('/profile'),
           ),

@@ -28,17 +28,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCurrentUser();
-  }
-
-  void _loadCurrentUser() {
-    final authState = ref.read(authProvider);
-    authState.whenData((user) {
-      if (user != null) {
-        _displayNameController.text = user.displayName ?? '';
-        _promptpayController.text = user.promptpayNumber ?? '';
-      }
-    });
+    // Controllers start empty, will be populated by ref.watch below
   }
 
   @override
@@ -89,6 +79,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authProvider).isLoading;
+    final authState = ref.watch(authProvider);
+
+    // Update controllers when auth state changes
+    authState.whenData((user) {
+      if (user != null) {
+        final newDisplayName = user.displayName ?? '';
+        final newPromptpay = user.promptpayNumber ?? '';
+        if (_displayNameController.text != newDisplayName ||
+            _promptpayController.text != newPromptpay) {
+          setState(() {
+            _displayNameController.text = newDisplayName;
+            _promptpayController.text = newPromptpay;
+          });
+        }
+      }
+    });
 
     return Scaffold(
       backgroundColor: bgLight,
@@ -109,7 +115,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             icon: const Icon(Icons.logout, color: textDark),
             onPressed: () async {
               await ref.read(authProvider.notifier).logout();
-              context.go('/login');
+              if (mounted) context.go('/login');
             },
           ),
         ],

@@ -10,7 +10,10 @@ export class AuthService {
   }) {
     try {
       // Auto-set display_name from email if not provided
-      const displayName = data.display_name ?? data.email.split('@')[0];
+      const rawName = data.display_name;
+      const displayName = (rawName !== null && rawName !== undefined && rawName !== "")
+        ? rawName
+        : data.email.split('@')[0];
 
       const { password_hash, ...user } = await prisma.users.create({
         data: {

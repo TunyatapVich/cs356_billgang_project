@@ -7,6 +7,7 @@ import '../../features/bill/create_bill_screen.dart';
 import '../../features/bill/add_items_screen.dart';
 import '../../features/bill/ocr_review_screen.dart';
 import '../../features/invite/invite_screen.dart';
+import '../../features/invite/join_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/login',
@@ -44,6 +45,6 @@ final appRouter = GoRouter(
     ),
     // GoRoute(path: '/bill/:id/assign', builder: (_, __) => const Placeholder()),
     // GoRoute(path: '/bill/:id/settlement', builder: (_, __) => const Placeholder()),
-    // GoRoute(path: '/join', builder: (_, __) => const Placeholder()),
+    GoRoute(path: '/join', builder: (context, state) => const JoinScreen()),
   ],
 );

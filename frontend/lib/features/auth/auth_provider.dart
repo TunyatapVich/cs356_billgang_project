@@ -21,9 +21,9 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) => User(
     id: json['id'],
     email: json['email'],
-    displayName: json['display_name'],
-    avatarUrl: json['avatar_url'],
-    promptpayNumber: json['promptpay_number'],
+    displayName: json['display_name'] ?? json['displayName'],
+    avatarUrl: json['avatar_url'] ?? json['avatarUrl'],
+    promptpayNumber: json['promptpay_number'] ?? json['promptpayNumber'],
   );
 }
 
