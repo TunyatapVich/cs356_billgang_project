@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { UserStatsService } from "../users/service";
 
 export class AuthService {
   static async registerUser(data: {
@@ -24,6 +25,7 @@ export class AuthService {
           password_hash: await Bun.password.hash(data.password),
         },
       });
+      await UserStatsService.onUserRegistered(user.id);
       return user;
     } catch (error: any) {
       if (error.code === "P2002") {

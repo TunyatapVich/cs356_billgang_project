@@ -34,6 +34,7 @@ model Users {
   item_assigns      ItemAssigns[]
   payments_sent     Payments[]    @relation("PaymentFromUser")
   payments_received Payments[]    @relation("PaymentToUser")
+  stats             UserStats?
 
   @@map("users")
 }
@@ -123,4 +124,17 @@ model Payments {
   @@index([from_user_id])
   @@index([to_user_id])
   @@map("payments")
+}
+
+model UserStats {
+  user_id        String   @id @db.Uuid
+  total_paid     Decimal  @default(0) @db.Decimal(12, 2)
+  total_received Decimal  @default(0) @db.Decimal(12, 2)
+  bills_count    Int      @default(0)
+  bills_owned    Int      @default(0)
+  updated_at     DateTime @default(now()) @db.Timestamp(6)
+
+  user Users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_stats")
 }

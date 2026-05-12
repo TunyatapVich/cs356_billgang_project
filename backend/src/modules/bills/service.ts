@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { decimalToNumber } from "../utils/decimal";
 import { minCashFlow, type Transfer } from "../utils/mincashflow";
 import { parseReceiptText, type ParsedItem } from "../utils/ocr";
+import { UserStatsService } from "../users/service";
 import type {
   BillCreateRequest,
   BillItemsRequest,
@@ -138,6 +139,7 @@ export class BillService {
         },
       },
     });
+    await UserStatsService.onBillCreated(userid);
     return serializeBill(bill);
   }
 
@@ -243,11 +245,16 @@ export class BillService {
     });
     if (!bill) throw new Error("NOT_FOUND");
 
-    await prisma.billMembers.upsert({
+    const existing = await prisma.billMembers.findUnique({
       where: { bill_id_user_id: { bill_id: bill.id, user_id: userid } },
-      update: {},
-      create: { bill_id: bill.id, user_id: userid, role: "member" },
     });
+
+    if (!existing) {
+      await prisma.billMembers.create({
+        data: { bill_id: bill.id, user_id: userid, role: "member" },
+      });
+      await UserStatsService.onBillJoined(userid);
+    }
 
     return this.getBill(userid, bill.id);
   }

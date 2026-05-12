@@ -1,7 +1,7 @@
 import { prisma } from "../../db";
 import { decimalToNumber } from "../utils/decimal";
 import { generatePromptPayPayload } from "../utils/promptpay";
-import type { PaymentCreateRequest } from "./model";
+import { UserStatsService } from "../users/service";
 
 const serializePayment = (p: any) => ({
   ...p,
@@ -91,6 +91,12 @@ export class PaymentService {
       });
       billSettled = true;
     }
+
+    await UserStatsService.onPaymentConfirmed(
+      payment.from_user_id,
+      payment.to_user_id,
+      Number(payment.amount),
+    );
 
     return { payment: serializePayment(payment), bill_settled: billSettled };
   }
