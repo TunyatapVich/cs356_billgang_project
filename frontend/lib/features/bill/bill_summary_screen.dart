@@ -17,6 +17,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
 
   Bill? _bill;
   List<BillItem> _items = [];
+  List<Map<String, dynamic>> _members = [];
   bool _loading = true;
   Object? _error;
 
@@ -37,11 +38,13 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       final bill = Bill.fromJson(data);
       final rawItems = (data['items'] as List<dynamic>?) ?? [];
       final items = rawItems.cast<Map<String, dynamic>>().map(BillItem.fromJson).toList();
+      final members = (data['members'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
 
       if (!mounted) return;
       setState(() {
         _bill = bill;
         _items = items;
+        _members = members;
         _loading = false;
       });
     } catch (e) {
@@ -51,6 +54,13 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
         _loading = false;
       });
     }
+  }
+
+  String get _payerName {
+    if (_bill?.paidBy == null) return 'User';
+    final member = _members.where((m) => m['user_id'] == _bill!.paidBy).firstOrNull;
+    final user = member?['user'] as Map<String, dynamic>?;
+    return (user?['display_name'] ?? user?['email'] ?? 'User') as String;
   }
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.lineTotal);
@@ -406,18 +416,21 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
 
 
   Widget _buildPayButton() {
+    final payerId = _bill?.paidBy;
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryBlue,
+          backgroundColor: payerId == null ? AppColors.textGray : AppColors.primaryBlue,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        onPressed: () => context.go('/bill/${widget.billId}/settlement'),
-        child: const Text('Pay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        onPressed: payerId == null
+            ? null
+            : () => context.go('/bill/${widget.billId}/paid/$payerId/${_total.toInt()}?amount=${_total.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}'),
+        child: Text(payerId == null ? 'No Payer Set' : 'Pay', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
     );
   }

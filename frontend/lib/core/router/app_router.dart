@@ -14,7 +14,6 @@ import '../../features/bill/edit_bill_screen.dart';
 import '../../features/assign/assign_screen.dart';
 import '../../features/invite/invite_screen.dart';
 import '../../features/invite/join_screen.dart';
-import '../../features/settlement/settlement_screen.dart';
 import '../../features/settlement/paid_screen.dart';
 import '../../features/splash/splash_screen.dart';
 
@@ -106,13 +105,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             InviteScreen(billId: state.pathParameters['id']!),
       ),
       // GoRoute(path: '/bill/:id/assign', builder: (_, __) => const Placeholder()),
-      // GoRoute(path: '/bill/:id/settlement', builder: (_, __) => const Placeholder()),
       GoRoute(path: '/join', builder: (context, state) => const JoinScreen()),
-      GoRoute(
-        path: '/bill/:id/settlement',
-        builder: (context, state) =>
-            SettlementScreen(billId: state.pathParameters['id']!),
-      ),
       GoRoute(
         path: '/bill/:id/paid/:toUserId/:amount',
         builder: (context, state) => PaidScreen(

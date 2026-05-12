@@ -93,6 +93,12 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
       item.assignedTo?.contains(_members.isEmpty ? '' : _members[_selectedMemberIndex].id) ?? false;
 
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.lineTotal);
+
+  String get _payerName {
+    if (_bill?.paidBy == null) return 'User';
+    final member = _members.where((m) => m.id == _bill!.paidBy).firstOrNull;
+    return member?.name ?? 'User';
+  }
   double get _service => _subtotal * ((_bill?.serviceChargePercent ?? 0) / 100);
   double get _vat => _subtotal * ((_bill?.vatPercent ?? 0) / 100);
   double get _total => _subtotal + _service + _vat;
@@ -524,8 +530,10 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              onPressed: () => context.go('/bill/${widget.billId}/settlement'),
-              child: const Text('Go to Settlement', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              onPressed: _bill?.paidBy == null
+                  ? null
+                  : () => context.go('/bill/${widget.billId}/paid/${_bill!.paidBy}/${_total.toInt()}?amount=${_total.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}'),
+              child: Text(_bill?.paidBy == null ? 'No Payer Set' : 'Go to Pay', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ),
           ),
         ],

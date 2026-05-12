@@ -28,6 +28,7 @@ class PaidScreen extends ConsumerStatefulWidget {
 class _PaidScreenState extends ConsumerState<PaidScreen> {
   String? _qrData;
   String? _promptpayNumber;
+  String? _fetchedToUserName;
   bool _loading = true;
   Object? _error;
 
@@ -35,6 +36,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   void initState() {
     super.initState();
     _qrData = widget.qrData;
+    _fetchedToUserName = widget.toUserName;
     if (_qrData == null) {
       _loadQrData();
     } else {
@@ -53,6 +55,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
       _qrData = result['qr_data'] as String?;
       final toUser = result['to_user'] as Map<String, dynamic>?;
       _promptpayNumber = toUser?['promptpay_number'] as String?;
+      _fetchedToUserName = toUser?['display_name'] as String? ?? _fetchedToUserName;
       if (!mounted) return;
       setState(() => _loading = false);
     } catch (e) {
@@ -165,7 +168,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'to ${widget.toUserName}',
+            'to ${_fetchedToUserName ?? widget.toUserName}',
             style: const TextStyle(color: AppColors.primaryBlue, fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ],
