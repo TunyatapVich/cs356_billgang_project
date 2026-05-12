@@ -147,29 +147,79 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   }
 
   Widget _buildMemberRow(Bill bill) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            bill.name,
-            style: const TextStyle(
-              color: AppColors.textDark,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+    return ClipPath(
+      clipper: _JaggedTopClipper(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: const BoxDecoration(
+          color: AppColors.cardWhite,
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  bill.name,
+                  style: const TextStyle(
+                    color: AppColors.textDark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  _formatDate(bill.date),
+                  style: const TextStyle(color: AppColors.textGray, fontSize: 13),
+                ),
+              ],
             ),
-          ),
-          Text(
-            _formatDate(bill.date),
-            style: const TextStyle(color: AppColors.textGray, fontSize: 13),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 1,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: Border(
+                          color: AppColors.textGray.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.textGray.withValues(alpha: 0.3)),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.only(left: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.textGray.withValues(alpha: 0.3)),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.only(left: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.textGray.withValues(alpha: 0.3)),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
