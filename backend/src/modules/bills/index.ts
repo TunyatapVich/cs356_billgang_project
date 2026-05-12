@@ -168,6 +168,40 @@ export const BillModule = new Elysia({ prefix: "/bills" })
   )
 
   .post(
+    "/:id/items/:itemId/assign",
+    async ({ params, body, userid, set }) => {
+      if (!userid) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+      try {
+        await BillService.assignItem(userid, params.id, params.itemId, body.user_id);
+        return { message: "Assigned" };
+      } catch (err: any) {
+        return handleError(err, set);
+      }
+    },
+    { params: BillItemIdParams, body: t.Object({ user_id: t.String() }) },
+  )
+
+  .delete(
+    "/:id/items/:itemId/assign/:assignUserId",
+    async ({ params, userid, set }) => {
+      if (!userid) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+      try {
+        await BillService.unassignItem(userid, params.id, params.itemId, params.assignUserId);
+        return { message: "Unassigned" };
+      } catch (err: any) {
+        return handleError(err, set);
+      }
+    },
+    { params: t.Object({ id: t.String(), itemId: t.String(), assignUserId: t.String() }) },
+  )
+
+  .post(
     "/:id/ocr",
     async ({ params, body, userid, set }) => {
       if (!userid) {

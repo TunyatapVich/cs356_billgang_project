@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { decimalToNumber } from "../utils/decimal";
 import { minCashFlow, type Transfer } from "../utils/mincashflow";
 import { parseReceiptText, type ParsedItem } from "../utils/ocr";
+import { broadcast } from "../utils/broker";
 import { UserStatsService } from "../users/service";
 import type {
   BillCreateRequest,
@@ -211,6 +212,24 @@ export class BillService {
       where: { id: itemId, bill_id: billId },
     });
     return result.count > 0;
+  }
+
+  static async assignItem(userid: string, billId: string, itemId: string, assignUserId: string) {
+    await this.assertMember(userid, billId);
+    await prisma.itemAssigns.upsert({
+      where: { bill_item_id_user_id: { bill_item_id: itemId, user_id: assignUserId } },
+      create: { bill_item_id: itemId, user_id: assignUserId },
+      update: {},
+    });
+    broadcast(billId, { type: "item_assigned", item_id: itemId, user_id: assignUserId });
+  }
+
+  static async unassignItem(userid: string, billId: string, itemId: string, assignUserId: string) {
+    await this.assertMember(userid, billId);
+    await prisma.itemAssigns.deleteMany({
+      where: { bill_item_id: itemId, user_id: assignUserId },
+    });
+    broadcast(billId, { type: "item_unassigned", item_id: itemId, user_id: assignUserId });
   }
 
   static async runOcr(userid: string, billId: string, rawText: string, imageUrl?: string) {

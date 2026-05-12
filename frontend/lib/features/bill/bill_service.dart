@@ -94,6 +94,22 @@ class BillService {
     await _dio.delete('/bills/$billId/items/$itemId');
   }
 
+  Future<void> assignItem({
+    required String billId,
+    required String itemId,
+    required String userId,
+  }) async {
+    await _dio.post('/bills/$billId/items/$itemId/assign', data: {'user_id': userId});
+  }
+
+  Future<void> unassignItem({
+    required String billId,
+    required String itemId,
+    required String userId,
+  }) async {
+    await _dio.delete('/bills/$billId/items/$itemId/assign/$userId');
+  }
+
   // ── OCR ────────────────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> runOcr({

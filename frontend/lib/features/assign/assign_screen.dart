@@ -41,16 +41,26 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
     });
 
     try {
-      final billData = await ref.read(billServiceProvider).getBill(widget.billId);
-      final itemsRaw = (billData['items'] as List<dynamic>?) ?? [];
-      _items = itemsRaw.cast<Map<String, dynamic>>().map(BillItem.fromJson).toList();
+      final data = await ref.read(billServiceProvider).getBill(widget.billId);
+      final itemsRaw = (data['items'] as List<dynamic>?) ?? [];
+      _items = itemsRaw.cast<Map<String, dynamic>>().map((itemJson) {
+        final assigns = (itemJson['item_assigns'] as List<dynamic>?) ?? [];
+        final assignedTo = assigns.map((a) => (a['user_id'] ?? a['userId'] ?? '') as String).toList();
+        final item = BillItem.fromJson(itemJson);
+        return item.copyWith(assignedTo: assignedTo);
+      }).toList();
 
-      // TODO: replace with real members from API when ready
-      _members = [
-        _Member(id: '1', name: 'You', avatar: 'Y'),
-        _Member(id: '2', name: 'Friend A', avatar: 'A'),
-        _Member(id: '3', name: 'Friend B', avatar: 'B'),
-      ];
+      final membersRaw = (data['members'] as List<dynamic>?) ?? [];
+      _members = membersRaw.cast<Map<String, dynamic>>().map((m) {
+        final user = m['user'] as Map<String, dynamic>? ?? {};
+        final displayName = (user['display_name'] ?? user['email'] ?? 'U') as String;
+        final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+        return _Member(
+          id: (m['user_id'] ?? user['id'] ?? '').toString(),
+          name: displayName,
+          avatar: initials,
+        );
+      }).toList();
 
       if (!mounted) return;
       setState(() {
@@ -66,12 +76,15 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
     }
   }
 
-  void _toggleItem(int itemIndex) {
+  void _toggleItem(int itemIndex) async {
     final memberId = _members[_selectedMemberIndex].id;
+    final item = _items[itemIndex];
+    final assigned = item.assignedTo ?? [];
+    final isCurrentlyAssigned = assigned.contains(memberId);
+
+    // Optimistic update
     setState(() {
-      final item = _items[itemIndex];
-      final assigned = item.assignedTo ?? [];
-      if (assigned.contains(memberId)) {
+      if (isCurrentlyAssigned) {
         _items[itemIndex] = item.copyWith(
           assignedTo: assigned.where((id) => id != memberId).toList(),
         );
@@ -79,6 +92,27 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
         _items[itemIndex] = item.copyWith(assignedTo: [...assigned, memberId]);
       }
     });
+
+    try {
+      if (isCurrentlyAssigned) {
+        await ref.read(billServiceProvider).unassignItem(
+          billId: widget.billId,
+          itemId: item.id,
+          userId: memberId,
+        );
+      } else {
+        await ref.read(billServiceProvider).assignItem(
+          billId: widget.billId,
+          itemId: item.id,
+          userId: memberId,
+        );
+      }
+    } catch (_) {
+      // Revert on failure
+      setState(() {
+        _items[itemIndex] = item;
+      });
+    }
   }
 
   bool _isSelected(BillItem item) =>
