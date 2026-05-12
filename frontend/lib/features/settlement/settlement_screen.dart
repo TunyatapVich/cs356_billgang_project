@@ -263,7 +263,7 @@ class _SettlementScreenState extends ConsumerState<SettlementScreen> {
               ),
               const SizedBox(height: 4),
               GestureDetector(
-                onTap: () => context.go('/bill/${widget.billId}/promptpay/$toUserId/${amount.toStringAsFixed(2)}'),
+                onTap: () => context.go('/bill/${widget.billId}/promptpay/$toUserId/${amount.toInt()}?amount=${amount.toStringAsFixed(2)}&name=${Uri.encodeComponent(toName)}'),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(

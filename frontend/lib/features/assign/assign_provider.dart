@@ -227,7 +227,9 @@ class AssignNotifier extends Notifier<AssignState> {
         for (final item in state.items)
           if (item.id == itemId)
             item.copyWith(
-              assignedTo: [...(item.assignedTo ?? []), userId],
+              assignedTo: (item.assignedTo?.contains(userId) ?? false)
+                  ? item.assignedTo
+                  : [...(item.assignedTo ?? []), userId],
             )
           else
             item,
@@ -241,7 +243,9 @@ class AssignNotifier extends Notifier<AssignState> {
         for (final item in state.items)
           if (item.id == itemId)
             item.copyWith(
-              assignedTo: (item.assignedTo ?? []).where((id) => id != userId).toList(),
+              assignedTo: (item.assignedTo?.contains(userId) ?? false)
+                  ? item.assignedTo!.where((id) => id != userId).toList()
+                  : item.assignedTo,
             )
           else
             item,

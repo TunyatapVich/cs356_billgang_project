@@ -27,9 +27,9 @@ class PromptpayScreen extends ConsumerStatefulWidget {
 
 class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
   String? _qrData;
+  String? _promptpayNumber;
   bool _loading = true;
   Object? _error;
-  String? _paymentId;
 
   @override
   void initState() {
@@ -51,30 +51,13 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
         amount: widget.amount,
       );
       _qrData = result['qr_data'] as String?;
-      final payment = result['payment'] as Map<String, dynamic>?;
-      _paymentId = payment?['id'] as String?;
+      final toUser = result['to_user'] as Map<String, dynamic>?;
+      _promptpayNumber = toUser?['promptpay_number'] as String?;
       if (!mounted) return;
       setState(() => _loading = false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _error = e; _loading = false; });
-    }
-  }
-
-  Future<void> _confirmPayment() async {
-    if (_paymentId == null) return;
-    try {
-      await ref.read(paymentServiceProvider).confirm(_paymentId!);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment confirmed!')),
-      );
-      context.go('/bill/${widget.billId}/summary');
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
     }
   }
 
@@ -88,7 +71,7 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/bill/${widget.billId}/summary'),
         ),
         title: const Text(
           'Pay',
@@ -116,11 +99,6 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
           children: [
             const Icon(Icons.error_outline, color: AppColors.errorRed, size: 42),
             const SizedBox(height: 12),
-            const Text(
-              'Unable to generate QR code',
-              style: TextStyle(color: AppColors.textDark, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
             Text(
               _error.toString(),
               style: const TextStyle(color: AppColors.textGray, fontSize: 13),
@@ -147,68 +125,13 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(
         children: [
-          _buildPayToCard(),
-          const SizedBox(height: 24),
           _buildQrCard(),
-          const SizedBox(height: 24),
-          _buildAmountCard(),
-          const SizedBox(height: 24),
-          _buildConfirmButton(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPayToCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.dimBlue,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.primaryBlue, width: 2),
-            ),
-            child: Center(
-              child: Text(
-                widget.toUserName.isNotEmpty ? widget.toUserName[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  color: AppColors.primaryBlue,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Pay to',
-                  style: TextStyle(color: AppColors.textGray, fontSize: 12),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.toUserName,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          if (_promptpayNumber != null) ...[
+            const SizedBox(height: 20),
+            _buildPhoneCard(),
+          ],
+          const SizedBox(height: 32),
+          _buildDoneButton(),
         ],
       ),
     );
@@ -238,25 +161,9 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.inputBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         children: [
-          const Text(
-            'Scan to pay',
-            style: TextStyle(
-              color: AppColors.textDark,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -272,35 +179,35 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'PromptPay QR',
-            style: TextStyle(color: AppColors.textGray, fontSize: 12),
+            'Scan with your banking app',
+            style: TextStyle(color: AppColors.textGray, fontSize: 13),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAmountCard() {
+  Widget _buildPhoneCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.inputBorder),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'Amount',
-            style: TextStyle(color: AppColors.textDark, fontSize: 16),
-          ),
+          const Icon(Icons.phone_android, color: AppColors.primaryBlue, size: 20),
+          const SizedBox(width: 10),
           Text(
-            '฿${widget.amount.toStringAsFixed(2)}',
+            _promptpayNumber!,
             style: const TextStyle(
-              color: AppColors.primaryBlue,
-              fontSize: 20,
+              color: AppColors.textDark,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
             ),
           ),
         ],
@@ -308,7 +215,7 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
     );
   }
 
-  Widget _buildConfirmButton() {
+  Widget _buildDoneButton() {
     return SizedBox(
       width: double.infinity,
       height: 52,
@@ -319,9 +226,9 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        onPressed: _confirmPayment,
+        onPressed: () => context.go('/bill/${widget.billId}/summary'),
         child: const Text(
-          'I have paid',
+          'Done',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
       ),

@@ -119,7 +119,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           billId: state.pathParameters['id']!,
           toUserId: state.pathParameters['toUserId']!,
           toUserName: state.uri.queryParameters['name'] ?? 'Unknown',
-          amount: double.tryParse(state.pathParameters['amount'] ?? '0') ?? 0,
+          amount: double.tryParse(state.uri.queryParameters['amount'] ?? '0') ?? 0,
         ),
       ),
     ],
