@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../bill/bill_provider.dart';
 import '../bill/bill_service.dart';
 import '../../core/socket/socket_client.dart';
+import '../../core/storage/token_storage.dart';
 
 // ── Member model for assign screen ────────────────────────────────────────────
 
@@ -96,9 +97,9 @@ class AssignNotifier extends Notifier<AssignState> {
         );
       }).toList();
 
-      // paid_by comes from the serialized bill
+      // paid_by comes from the serialized bill; fall back to created_by for new bills
       final billData = data['bill'] as Map<String, dynamic>?;
-      final payerId = (billData?['paid_by'] ?? data['paid_by'])?.toString();
+      final payerId = (billData?['paid_by'] ?? billData?['created_by'])?.toString();
 
       state = state.copyWith(
         items: items,
@@ -174,52 +175,56 @@ class AssignNotifier extends Notifier<AssignState> {
   bool isItemSelected(BillItem item) =>
       item.assignedTo?.contains(state.selectedMemberId) ?? false;
 
-  void setPayer(String billId, String payerId) async {
+  Future<void> setPayer(String billId, String payerId) async {
+    final previous = state.payerId;
     state = state.copyWith(payerId: payerId);
     try {
       await _billService.setPayer(billId: billId, payerId: payerId);
     } catch (_) {
-      // WebSocket will update us on success; on failure just revert
+      state = state.copyWith(payerId: previous);
     }
   }
 
-  void _connectSocket(String billId) {
+  Future<void> _connectSocket(String billId) async {
     _socketSub?.cancel();
     _socket?.disconnect();
 
+    final token = await TokenStorage.read() ?? '';
     _socket = SocketClient();
-    _socket!.connect(billId, '');
+    _socket!.connect(billId, token);
     _socketSub = _socket!.stream.listen(_handleSocketEvent);
   }
 
   void _handleSocketEvent(Map<String, dynamic> event) {
     final type = event['type'] as String?;
-    final itemId = event['item_id'] as String?;
-    final userId = event['user_id'] as String?;
-
-    if (itemId == null || userId == null) return;
 
     switch (type) {
       case 'item_assigned':
-        _applyAssign(itemId, userId);
+        final itemId = event['item_id'] as String?;
+        final userId = event['user_id'] as String?;
+        if (itemId != null && userId != null) _applyAssign(itemId, userId);
         break;
       case 'item_unassigned':
-        _applyUnassign(itemId, userId);
-        break;
-      case 'item_added':
-        // Refetch bill to get new item with full data
-        // For now, ignore - new items will appear on next load
+        final itemId = event['item_id'] as String?;
+        final userId = event['user_id'] as String?;
+        if (itemId != null && userId != null) _applyUnassign(itemId, userId);
         break;
       case 'item_removed':
-        state = state.copyWith(
-          items: state.items.where((i) => i.id != itemId).toList(),
-        );
+        final itemId = event['item_id'] as String?;
+        if (itemId != null) {
+          state = state.copyWith(
+            items: state.items.where((i) => i.id != itemId).toList(),
+          );
+        }
         break;
       case 'payer_set':
         final payerId = event['paid_by'] as String?;
         if (payerId != null) {
           state = state.copyWith(payerId: payerId);
         }
+        break;
+      case 'member_joined':
+        // Refetch to pick up new member
         break;
     }
   }
