@@ -148,30 +148,23 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
 
   Widget _buildMemberRow(Bill bill) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.inputBorder),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             bill.name,
             style: const TextStyle(
               color: AppColors.textDark,
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
-          Container(
-            height: 1,
-            width: 60,
-            color: AppColors.textGray.withValues(alpha: 0.4),
-          ),
-          const SizedBox(height: 8),
           Text(
             _formatDate(bill.date),
             style: const TextStyle(color: AppColors.textGray, fontSize: 13),

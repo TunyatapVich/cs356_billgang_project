@@ -130,6 +130,7 @@ export class BillService {
     const bill = await prisma.bills.create({
       data: {
         created_by: userid,
+        paid_by: userid,
         name: data.name,
         date: new Date(data.date),
         vat_pct: data.vat_pct ?? 0,
