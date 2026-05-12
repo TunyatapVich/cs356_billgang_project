@@ -62,10 +62,17 @@ Future<String> uploadSlipToCloudinary(Uint8List imageBytes) async {
     );
 
     final data = response.data as Map<String, dynamic>;
+    if (data.containsKey('error')) {
+      final err = data['error'] as Map<String, dynamic>;
+      throw Exception('Cloudinary error: ${err['message'] ?? data}');
+    }
     return data['secure_url'] as String;
   } on DioException catch (e) {
     final status = e.response?.statusCode;
-    final body = e.response?.data;
+    Object? body = e.response?.data;
+    if (body is Map && body.containsKey('error')) {
+      body = (body['error'] as Map<String, dynamic>)['message'];
+    }
     throw Exception('Cloudinary $status → $body');
   }
 }
