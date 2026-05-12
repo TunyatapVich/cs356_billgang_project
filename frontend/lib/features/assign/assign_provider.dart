@@ -19,6 +19,7 @@ class AssignState {
   final List<BillItem> items;
   final List<AssignMember> members;
   final int selectedMemberIndex;
+  final String? payerId; // who paid the bill
   final bool loading;
   final Object? error;
 
@@ -26,6 +27,7 @@ class AssignState {
     this.items = const [],
     this.members = const [],
     this.selectedMemberIndex = 0,
+    this.payerId,
     this.loading = true,
     this.error,
   });
@@ -34,6 +36,7 @@ class AssignState {
     List<BillItem>? items,
     List<AssignMember>? members,
     int? selectedMemberIndex,
+    String? payerId,
     bool? loading,
     Object? error,
   }) {
@@ -41,6 +44,7 @@ class AssignState {
       items: items ?? this.items,
       members: members ?? this.members,
       selectedMemberIndex: selectedMemberIndex ?? this.selectedMemberIndex,
+      payerId: payerId ?? this.payerId,
       loading: loading ?? this.loading,
       error: error,
     );
@@ -92,9 +96,14 @@ class AssignNotifier extends Notifier<AssignState> {
         );
       }).toList();
 
+      // paid_by comes from the serialized bill
+      final billData = data['bill'] as Map<String, dynamic>?;
+      final payerId = (billData?['paid_by'] ?? data['paid_by'])?.toString();
+
       state = state.copyWith(
         items: items,
         members: members,
+        payerId: payerId,
         selectedMemberIndex: 0,
         loading: false,
       );
@@ -162,6 +171,15 @@ class AssignNotifier extends Notifier<AssignState> {
   bool isItemSelected(BillItem item) =>
       item.assignedTo?.contains(state.selectedMemberId) ?? false;
 
+  void setPayer(String billId, String payerId) async {
+    state = state.copyWith(payerId: payerId);
+    try {
+      await _billService.setPayer(billId: billId, payerId: payerId);
+    } catch (_) {
+      // WebSocket will update us on success; on failure just revert
+    }
+  }
+
   void _connectSocket(String billId) {
     _socketSub?.cancel();
     _socket?.disconnect();
@@ -193,6 +211,12 @@ class AssignNotifier extends Notifier<AssignState> {
         state = state.copyWith(
           items: state.items.where((i) => i.id != itemId).toList(),
         );
+        break;
+      case 'payer_set':
+        final payerId = event['paid_by'] as String?;
+        if (payerId != null) {
+          state = state.copyWith(payerId: payerId);
+        }
         break;
     }
   }

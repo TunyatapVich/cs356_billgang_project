@@ -30,6 +30,7 @@ model Users {
   created_at       DateTime @default(now()) @db.Timestamp(6)
 
   created_bills     Bills[]       @relation("BillCreator")
+  paid_bills        Bills[]       @relation("BillPayer")
   bill_members      BillMembers[]
   item_assigns      ItemAssigns[]
   payments_sent     Payments[]    @relation("PaymentFromUser")
@@ -44,6 +45,7 @@ model Bills {
   name               String   @db.VarChar(255)
   date               DateTime @db.Timestamp(6)
   created_by         String   @db.Uuid
+  paid_by            String?  @db.Uuid
   status             String   @db.VarChar(50)
   receipt_image_url  String?  @db.Text
   service_charge_pct Decimal? @db.Decimal(5, 2)
@@ -52,11 +54,13 @@ model Bills {
   created_at         DateTime @default(now()) @db.Timestamp(6)
 
   creator      Users         @relation("BillCreator", fields: [created_by], references: [id], onUpdate: Cascade)
+  payer        Users?        @relation("BillPayer", fields: [paid_by], references: [id], onUpdate: Cascade)
   bill_items   BillItems[]
   bill_members BillMembers[]
   payments     Payments[]
 
   @@index([created_by])
+  @@index([paid_by])
   @@map("bills")
 }
 

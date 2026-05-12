@@ -9,6 +9,7 @@ import {
   BillModel,
   BillOcrPayload,
   BillPatchPayload,
+  BillPayerPayload,
 } from "./model";
 import { BillService } from "./service";
 import { authPlugin } from "../utils/auth";
@@ -268,4 +269,21 @@ export const BillModule = new Elysia({ prefix: "/bills" })
       }
     },
     { params: BillIdParams },
+  )
+
+  .patch(
+    "/:id/payer",
+    async ({ params, body, userid, set }) => {
+      if (!userid) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+      try {
+        const bill = await BillService.setPayer(userid, params.id, body.paid_by);
+        return { bill };
+      } catch (err: any) {
+        return handleError(err, set);
+      }
+    },
+    { params: BillIdParams, body: BillPayerPayload },
   );

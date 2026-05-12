@@ -8,6 +8,7 @@ class Bill {
   final String name;
   final DateTime date;
   final String createdBy;
+  final String? paidBy;
   final String status;
   final String inviteCode;
   final DateTime createdAt;
@@ -22,6 +23,7 @@ class Bill {
     required this.name,
     required this.date,
     required this.createdBy,
+    this.paidBy,
     required this.status,
     required this.inviteCode,
     required this.createdAt,
@@ -39,6 +41,7 @@ class Bill {
     name: (json['name'] ?? json['Name'] ?? '').toString(),
     date: DateTime.tryParse((json['date'] ?? json['Date'] ?? '').toString()) ?? DateTime.now(),
     createdBy: (json['created_by'] ?? json['createdBy'] ?? json['CreatedBy'] ?? '').toString(),
+    paidBy: (json['paid_by'] ?? json['paidBy'])?.toString(),
     status: (json['status'] ?? json['Status'] ?? 'active').toString(),
     inviteCode: (json['invite_code'] ?? json['inviteCode'] ?? json['InviteCode'] ?? '').toString(),
     createdAt: DateTime.tryParse((json['created_at'] ?? json['createdAt'] ?? json['CreatedAt'] ?? '').toString()) ?? DateTime.now(),
