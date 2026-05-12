@@ -75,14 +75,15 @@ class AuthNotifier extends AsyncNotifier<User?> {
     String? avatarUrl,
     String? promptpayNumber,
   }) async {
-    state = await AsyncValue.guard(() async {
-      final data = await ref.read(authServiceProvider).updateProfile(
-        displayName: displayName,
-        avatarUrl: avatarUrl,
-        promptpayNumber: promptpayNumber,
-      );
-      return User.fromJson(data['user'] as Map<String, dynamic>);
-    });
+    final data = await ref.read(authServiceProvider).updateProfile(
+      displayName: displayName,
+      avatarUrl: avatarUrl,
+      promptpayNumber: promptpayNumber,
+    );
+    final userJson = data['user'] as Map<String, dynamic>?;
+    if (userJson != null) {
+      state = AsyncData(User.fromJson(userJson));
+    }
   }
 }
 
