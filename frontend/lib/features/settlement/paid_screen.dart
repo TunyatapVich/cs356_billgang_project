@@ -66,6 +66,9 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
       setState(() => _loading = false);
     } catch (e) {
       if (!mounted) return;
+      // DEBUG
+      print('[PAID DEBUG] _loadQrData error: $e');
+      print('[PAID DEBUG] toUserId: ${widget.toUserId}, amount: ${widget.amount}');
       setState(() { _error = e; _loading = false; });
     }
   }
@@ -100,6 +103,8 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   }
 
   Widget _buildError() {
+    // DEBUG
+    print('[PAID DEBUG] _error: $_error, toUserName: $_fetchedToUserName, promptpay: $_promptpayNumber');
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
