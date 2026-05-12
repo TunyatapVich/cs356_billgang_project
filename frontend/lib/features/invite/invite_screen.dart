@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/api/api_client.dart';
 
 class InviteScreen extends ConsumerStatefulWidget {
@@ -12,13 +13,6 @@ class InviteScreen extends ConsumerStatefulWidget {
 }
 
 class _InviteScreenState extends ConsumerState<InviteScreen> {
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const inputBorder = Color(0xFFDCDFEA);
-  static const errorRed = Color(0xFFD94848);
 
   String? _inviteCode;
   String? _billId;
@@ -78,19 +72,19 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        backgroundColor: bgLight,
+        backgroundColor: AppColors.bgLight,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
           onPressed: () => context.go('/bill/$_billId/summary'),
         ),
         title: const Text(
           'Invite',
           style: TextStyle(
-            color: textDark,
+            color: AppColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -114,7 +108,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
           const Text(
             'Invite Friends',
             style: TextStyle(
-              color: textDark,
+              color: AppColors.textDark,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
@@ -123,7 +117,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
           const SizedBox(height: 8),
           const Text(
             'Share this code with your friends to split the bill together.',
-            style: TextStyle(color: textGray, fontSize: 16, height: 1.4),
+            style: TextStyle(color: AppColors.textGray, fontSize: 16, height: 1.4),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
@@ -152,7 +146,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
             color: Color(0xFFE4E6FF),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.group_add, color: primaryBlue, size: 72),
+          child: const Icon(Icons.group_add, color: AppColors.primaryBlue, size: 72),
         ),
         Positioned(
           right: 4,
@@ -160,11 +154,11 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: primaryBlue,
+              color: AppColors.primaryBlue,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: primaryBlue.withValues(alpha: 0.24),
+                  color: AppColors.primaryBlue.withValues(alpha: 0.24),
                   blurRadius: 14,
                   offset: const Offset(0, 8),
                 ),
@@ -180,9 +174,9 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   Widget _buildCodeCard() {
     return Container(
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: inputBorder),
+        border: Border.all(color: AppColors.inputBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -202,7 +196,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 3,
-                color: primaryBlue,
+                color: AppColors.primaryBlue,
               ),
               textAlign: TextAlign.center,
             ),
@@ -228,18 +222,18 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: errorRed.withValues(alpha: 0.08),
+        color: AppColors.errorRed.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: errorRed.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: errorRed, size: 20),
+          const Icon(Icons.error_outline, color: AppColors.errorRed, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               error.toString(),
-              style: const TextStyle(color: errorRed, fontSize: 13),
+              style: const TextStyle(color: AppColors.errorRed, fontSize: 13),
             ),
           ),
         ],
@@ -250,12 +244,12 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   Widget _buildDivider() {
     return Row(
       children: [
-        Expanded(child: Container(height: 1, color: inputBorder)),
+        Expanded(child: Container(height: 1, color: AppColors.inputBorder)),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text('or', style: TextStyle(color: textGray, fontSize: 14)),
+          child: Text('or', style: TextStyle(color: AppColors.textGray, fontSize: 14)),
         ),
-        Expanded(child: Container(height: 1, color: inputBorder)),
+        Expanded(child: Container(height: 1, color: AppColors.inputBorder)),
       ],
     );
   }
@@ -266,8 +260,8 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
       height: 52,
       child: OutlinedButton.icon(
         style: OutlinedButton.styleFrom(
-          foregroundColor: primaryBlue,
-          side: const BorderSide(color: primaryBlue, width: 1.5),
+          foregroundColor: AppColors.primaryBlue,
+          side: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 0,
         ),
@@ -288,12 +282,12 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: errorRed, size: 42),
+            const Icon(Icons.error_outline, color: AppColors.errorRed, size: 42),
             const SizedBox(height: 12),
             const Text(
               'Unable to load invite code',
               style: TextStyle(
-                color: textDark,
+                color: AppColors.textDark,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -301,13 +295,13 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
             const SizedBox(height: 6),
             Text(
               _error.toString(),
-              style: const TextStyle(color: textGray, fontSize: 13),
+              style: const TextStyle(color: AppColors.textGray, fontSize: 13),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
+                backgroundColor: AppColors.primaryBlue,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),

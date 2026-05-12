@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/api/api_client.dart';
 
 class JoinScreen extends ConsumerStatefulWidget {
@@ -13,14 +14,6 @@ class JoinScreen extends ConsumerStatefulWidget {
 }
 
 class _JoinScreenState extends ConsumerState<JoinScreen> {
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const inputFill = Color(0xFFF2F4FC);
-  static const inputBorder = Color(0xFFDCDFEA);
-  static const errorRed = Color(0xFFD94848);
 
   final _codeController = TextEditingController();
   bool _isScanning = false;
@@ -99,19 +92,19 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        backgroundColor: bgLight,
+        backgroundColor: AppColors.bgLight,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
           onPressed: () => context.go('/'),
         ),
         title: const Text(
           'Join Bill',
           style: TextStyle(
-            color: textDark,
+            color: AppColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -131,7 +124,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
           const Text(
             'Join a Bill',
             style: TextStyle(
-              color: textDark,
+              color: AppColors.textDark,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
@@ -140,7 +133,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
           const SizedBox(height: 8),
           const Text(
             'Enter the invite code or scan the QR code from your friend.',
-            style: TextStyle(color: textGray, fontSize: 16, height: 1.4),
+            style: TextStyle(color: AppColors.textGray, fontSize: 16, height: 1.4),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
@@ -171,7 +164,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
             color: Color(0xFFE4E6FF),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.qr_code_scanner, color: primaryBlue, size: 72),
+          child: const Icon(Icons.qr_code_scanner, color: AppColors.primaryBlue, size: 72),
         ),
         Positioned(
           right: 4,
@@ -179,11 +172,11 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: primaryBlue,
+              color: AppColors.primaryBlue,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: primaryBlue.withValues(alpha: 0.24),
+                  color: AppColors.primaryBlue.withValues(alpha: 0.24),
                   blurRadius: 14,
                   offset: const Offset(0, 8),
                 ),
@@ -199,9 +192,9 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
   Widget _buildCodeInput() {
     return Container(
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: inputBorder),
+        border: Border.all(color: AppColors.inputBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -217,13 +210,13 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
           fontSize: 20,
           fontWeight: FontWeight.bold,
           letterSpacing: 2,
-          color: primaryBlue,
+          color: AppColors.primaryBlue,
         ),
         textAlign: TextAlign.center,
         decoration: InputDecoration(
           hintText: 'ABC12345',
           hintStyle: TextStyle(
-            color: textGray.withValues(alpha: 0.5),
+            color: AppColors.textGray.withValues(alpha: 0.5),
             letterSpacing: 2,
             fontWeight: FontWeight.normal,
           ),
@@ -245,7 +238,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
       height: 52,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
+          backgroundColor: AppColors.primaryBlue,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 0,
@@ -271,12 +264,12 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
   Widget _buildDivider() {
     return Row(
       children: [
-        Expanded(child: Container(height: 1, color: inputBorder)),
+        Expanded(child: Container(height: 1, color: AppColors.inputBorder)),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text('or', style: TextStyle(color: textGray, fontSize: 14)),
+          child: Text('or', style: TextStyle(color: AppColors.textGray, fontSize: 14)),
         ),
-        Expanded(child: Container(height: 1, color: inputBorder)),
+        Expanded(child: Container(height: 1, color: AppColors.inputBorder)),
       ],
     );
   }
@@ -287,8 +280,8 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
       height: 52,
       child: OutlinedButton.icon(
         style: OutlinedButton.styleFrom(
-          foregroundColor: primaryBlue,
-          side: const BorderSide(color: primaryBlue, width: 1.5),
+          foregroundColor: AppColors.primaryBlue,
+          side: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 0,
         ),
@@ -358,18 +351,18 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: errorRed.withValues(alpha: 0.08),
+        color: AppColors.errorRed.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: errorRed.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: errorRed, size: 20),
+          const Icon(Icons.error_outline, color: AppColors.errorRed, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               error.toString(),
-              style: const TextStyle(color: errorRed, fontSize: 13),
+              style: const TextStyle(color: AppColors.errorRed, fontSize: 13),
             ),
           ),
         ],

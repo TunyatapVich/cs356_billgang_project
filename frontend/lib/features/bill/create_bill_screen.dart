@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_colors.dart';
 import 'bill_provider.dart';
 
 class CreateBillScreen extends ConsumerStatefulWidget {
@@ -12,14 +13,6 @@ class CreateBillScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const inputFill = Color(0xFFF2F4FC);
-  static const inputBorder = Color(0xFFDCDFEA);
-  static const errorRed = Color(0xFFD94848);
 
   final _nameController = TextEditingController();
   final _serviceController = TextEditingController(text: '0');
@@ -99,19 +92,19 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        backgroundColor: bgLight,
+        backgroundColor: AppColors.bgLight,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
           onPressed: () => context.go('/'),
         ),
         title: const Text(
           'Create Bill',
           style: TextStyle(
-            color: textDark,
+            color: AppColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -126,7 +119,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
             const Text(
               'New Bill',
               style: TextStyle(
-                color: textDark,
+                color: AppColors.textDark,
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
               ),
@@ -135,7 +128,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
             const SizedBox(height: 8),
             const Text(
               'Enter bill details to get started.',
-              style: TextStyle(color: textGray, fontSize: 16, height: 1.4),
+              style: TextStyle(color: AppColors.textGray, fontSize: 16, height: 1.4),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -163,7 +156,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
             color: Color(0xFFE4E6FF),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.receipt_long, color: primaryBlue, size: 56),
+          child: const Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 56),
         ),
         Positioned(
           right: 0,
@@ -171,11 +164,11 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: primaryBlue,
+              color: AppColors.primaryBlue,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: primaryBlue.withValues(alpha: 0.24),
+                  color: AppColors.primaryBlue.withValues(alpha: 0.24),
                   blurRadius: 12,
                   offset: const Offset(0, 6),
                 ),
@@ -192,9 +185,9 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: inputBorder),
+        border: Border.all(color: AppColors.inputBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -264,7 +257,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
         Text(
           label,
           style: const TextStyle(
-            color: textGray,
+            color: AppColors.textGray,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -273,9 +266,9 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
         Container(
           height: 48,
           decoration: BoxDecoration(
-            color: inputFill,
+            color: AppColors.inputFill,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: inputBorder),
+            border: Border.all(color: AppColors.inputBorder),
           ),
           child: TextField(
             controller: controller,
@@ -288,11 +281,11 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               hintText: hint,
               hintStyle: TextStyle(
-                color: textGray.withValues(alpha: 0.5),
+                color: AppColors.textGray.withValues(alpha: 0.5),
                 fontSize: 14,
               ),
               prefixIcon: prefixIcon != null
-                  ? Icon(prefixIcon, color: textGray, size: 18)
+                  ? Icon(prefixIcon, color: AppColors.textGray, size: 18)
                   : null,
             ),
           ),
@@ -307,7 +300,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
       height: 52,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
+          backgroundColor: AppColors.primaryBlue,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 0,
@@ -334,18 +327,18 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: errorRed.withValues(alpha: 0.08),
+        color: AppColors.errorRed.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: errorRed.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: errorRed, size: 20),
+          const Icon(Icons.error_outline, color: AppColors.errorRed, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               error.toString(),
-              style: const TextStyle(color: errorRed, fontSize: 13),
+              style: const TextStyle(color: AppColors.errorRed, fontSize: 13),
             ),
           ),
         ],

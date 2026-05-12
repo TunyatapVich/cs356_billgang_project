@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/theme/app_colors.dart';
 import 'bill_provider.dart';
 import 'bill_service.dart';
 
@@ -46,14 +47,6 @@ class OcrReviewScreen extends ConsumerStatefulWidget {
 }
 
 class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const inputFill = Color(0xFFF2F4FC);
-  static const inputBorder = Color(0xFFDCDFEA);
-  static const errorRed = Color(0xFFD94848);
 
   final _picker = ImagePicker();
   final _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
@@ -175,19 +168,19 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        backgroundColor: bgLight,
+        backgroundColor: AppColors.bgLight,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
           onPressed: () => context.go('/bill/${widget.billId}/items'),
         ),
         title: const Text(
           'Scan Receipt',
           style: TextStyle(
-            color: textDark,
+            color: AppColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -206,7 +199,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                     const SizedBox(height: 12),
                     Text(
                       _error!,
-                      style: const TextStyle(color: errorRed, fontSize: 13),
+                      style: const TextStyle(color: AppColors.errorRed, fontSize: 13),
                     ),
                   ],
                   if (_items.isNotEmpty) ...[
@@ -230,7 +223,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -253,7 +246,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                 ),
                 child: const Icon(
                   Icons.document_scanner_outlined,
-                  color: primaryBlue,
+                  color: AppColors.primaryBlue,
                 ),
               ),
               const SizedBox(width: 14),
@@ -264,7 +257,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                     Text(
                       'Receipt Scanner',
                       style: TextStyle(
-                        color: textDark,
+                        color: AppColors.textDark,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -272,7 +265,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                     SizedBox(height: 3),
                     Text(
                       'ML Kit reads text on-device, then our AI structures it.',
-                      style: TextStyle(color: textGray, fontSize: 12),
+                      style: TextStyle(color: AppColors.textGray, fontSize: 12),
                     ),
                   ],
                 ),
@@ -304,13 +297,13 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: primaryBlue,
+                            color: AppColors.primaryBlue,
                           ),
                         ),
                         SizedBox(width: 12),
                         Text(
                           'Reading receipt…',
-                          style: TextStyle(color: textGray, fontSize: 13),
+                          style: TextStyle(color: AppColors.textGray, fontSize: 13),
                         ),
                       ],
                     ),
@@ -347,16 +340,16 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
   }) {
     return OutlinedButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, color: primaryBlue, size: 18),
+      icon: Icon(icon, color: AppColors.primaryBlue, size: 18),
       label: Text(
         label,
         style: const TextStyle(
-          color: primaryBlue,
+          color: AppColors.primaryBlue,
           fontWeight: FontWeight.bold,
         ),
       ),
       style: OutlinedButton.styleFrom(
-        side: const BorderSide(color: primaryBlue),
+        side: const BorderSide(color: AppColors.primaryBlue),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
@@ -371,7 +364,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
         const Text(
           'Parsed Items',
           style: TextStyle(
-            color: textDark,
+            color: AppColors.textDark,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -379,7 +372,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
         const Spacer(),
         Text(
           '${_items.length} items',
-          style: const TextStyle(color: textGray, fontSize: 13),
+          style: const TextStyle(color: AppColors.textGray, fontSize: 13),
         ),
       ],
     );
@@ -392,7 +385,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: cardWhite,
+          color: AppColors.cardWhite,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -438,7 +431,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
               onTap: () => _removeItem(i),
               child: const Icon(
                 Icons.close,
-                color: textGray,
+                color: AppColors.textGray,
                 size: 18,
               ),
             ),
@@ -457,15 +450,15 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
     return Container(
       height: 38,
       decoration: BoxDecoration(
-        color: inputFill,
+        color: AppColors.inputFill,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: inputBorder),
+        border: Border.all(color: AppColors.inputBorder),
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
-        style: const TextStyle(fontSize: 13, color: textDark),
+        style: const TextStyle(fontSize: 13, color: AppColors.textDark),
         decoration: InputDecoration(
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -473,7 +466,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
             vertical: 8,
           ),
           hintText: hint,
-          hintStyle: const TextStyle(color: textGray, fontSize: 12),
+          hintStyle: const TextStyle(color: AppColors.textGray, fontSize: 12),
         ),
       ),
     );
@@ -490,10 +483,10 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
           ));
         });
       },
-      icon: const Icon(Icons.add, color: primaryBlue, size: 18),
+      icon: const Icon(Icons.add, color: AppColors.primaryBlue, size: 18),
       label: const Text(
         'Add row',
-        style: TextStyle(color: primaryBlue, fontWeight: FontWeight.w600),
+        style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -501,7 +494,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
   Widget _buildConfirmBar() {
     return Container(
       decoration: const BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         boxShadow: [
           BoxShadow(
             color: Color(0x0D000000),
@@ -521,7 +514,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
         height: 50,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryBlue,
+            backgroundColor: AppColors.primaryBlue,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_colors.dart';
 import '../bill/bill_provider.dart';
 import '../bill/bill_service.dart';
 import '../bill/widgets/skeleton_loader.dart';
@@ -14,12 +15,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const errorRed = Color(0xFFE84545);
 
   late TabController _tabController;
 
@@ -42,7 +37,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
         decoration: const BoxDecoration(
-          color: cardWhite,
+          color: AppColors.cardWhite,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -52,7 +47,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: textGray.withValues(alpha: 0.3),
+                color: AppColors.textGray.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -60,7 +55,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             const Text(
               'What would you like to do?',
               style: TextStyle(
-                color: textDark,
+                color: AppColors.textDark,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -68,7 +63,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             const SizedBox(height: 24),
             _SheetOption(
               icon: Icons.add_circle_outline,
-              iconColor: primaryBlue,
+              iconColor: AppColors.primaryBlue,
               label: 'Create New Bill',
               subtitle: 'Start a new bill and invite friends',
               onTap: () {
@@ -79,7 +74,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             const SizedBox(height: 12),
             _SheetOption(
               icon: Icons.qr_code_scanner,
-              iconColor: primaryBlue,
+              iconColor: AppColors.primaryBlue,
               label: 'Join a Bill',
               subtitle: 'Use invite code or scan QR code',
               onTap: () {
@@ -99,23 +94,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final billState = ref.watch(billListProvider);
 
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.bgLight,
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateOrJoin,
-        backgroundColor: primaryBlue,
+        backgroundColor: AppColors.primaryBlue,
         elevation: 4,
         child: const Icon(Icons.add, color: Colors.white, size: 26),
       ),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
-            backgroundColor: bgLight,
+            backgroundColor: AppColors.bgLight,
             elevation: 0,
             pinned: true,
             title: const Text(
               'BillGang',
               style: TextStyle(
-                color: primaryBlue,
+                color: AppColors.primaryBlue,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -123,19 +118,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             actions: [
               IconButton(
                 onPressed: () => context.go('/profile'),
-                icon: const Icon(Icons.person_outline, color: primaryBlue),
+                icon: const Icon(Icons.person_outline, color: AppColors.primaryBlue),
               ),
             ],
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(48),
               child: Container(
-                color: bgLight,
+                color: AppColors.bgLight,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: TabBar(
                   controller: _tabController,
-                  labelColor: primaryBlue,
-                  unselectedLabelColor: textGray,
-                  indicatorColor: primaryBlue,
+                  labelColor: AppColors.primaryBlue,
+                  unselectedLabelColor: AppColors.textGray,
+                  indicatorColor: AppColors.primaryBlue,
                   indicatorWeight: 3,
                   tabs: const [
                     Tab(text: 'Active'),
@@ -187,14 +182,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         children: [
           Icon(
             Icons.receipt_long,
-            color: textGray.withValues(alpha: 0.4),
+            color: AppColors.textGray.withValues(alpha: 0.4),
             size: 64,
           ),
           const SizedBox(height: 16),
           const Text(
             'No bills here',
             style: TextStyle(
-              color: textDark,
+              color: AppColors.textDark,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -215,27 +210,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: errorRed.withValues(alpha: 0.1),
+                color: AppColors.errorRed.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: const Icon(Icons.error_outline, color: errorRed, size: 32),
+              child: const Icon(Icons.error_outline, color: AppColors.errorRed, size: 32),
             ),
             const SizedBox(height: 20),
             const Text('Unable to load bills',
                 style: TextStyle(
-                    color: textDark,
+                    color: AppColors.textDark,
                     fontSize: 18,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
               error.toString(),
-              style: const TextStyle(color: textGray, fontSize: 13),
+              style: const TextStyle(color: AppColors.textGray, fontSize: 13),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
+                backgroundColor: AppColors.primaryBlue,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape:
@@ -268,10 +263,6 @@ class _SheetOption extends StatelessWidget {
     required this.onTap,
   });
 
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const primaryBlue = Color(0xFF4E54C8);
 
   @override
   Widget build(BuildContext context) {
@@ -283,9 +274,9 @@ class _SheetOption extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: cardWhite,
+            color: AppColors.cardWhite,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: primaryBlue.withValues(alpha: 0.15)),
+            border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.15)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -313,7 +304,7 @@ class _SheetOption extends StatelessWidget {
                     Text(
                       label,
                       style: const TextStyle(
-                        color: textDark,
+                        color: AppColors.textDark,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -321,12 +312,12 @@ class _SheetOption extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(color: textGray, fontSize: 13),
+                      style: const TextStyle(color: AppColors.textGray, fontSize: 13),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: textGray, size: 22),
+              const Icon(Icons.chevron_right, color: AppColors.textGray, size: 22),
             ],
           ),
         ),
@@ -341,11 +332,6 @@ class _BillCard extends StatelessWidget {
   final Bill bill;
   final VoidCallback onDelete;
 
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3246);
-  static const textGray = Color(0xFF8E95A9);
-  static const errorRed = Color(0xFFE84545);
 
   @override
   Widget build(BuildContext context) {
@@ -359,7 +345,7 @@ class _BillCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: cardWhite,
+              color: AppColors.cardWhite,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -377,7 +363,7 @@ class _BillCard extends StatelessWidget {
                     color: const Color(0xFFE4E6FF),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.receipt, color: primaryBlue, size: 22),
+                  child: const Icon(Icons.receipt, color: AppColors.primaryBlue, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -387,7 +373,7 @@ class _BillCard extends StatelessWidget {
                       Text(
                         bill.name,
                         style: const TextStyle(
-                          color: textDark,
+                          color: AppColors.textDark,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -395,7 +381,7 @@ class _BillCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         '${bill.memberCount} people  ·  ${_formatDate(bill.date)}',
-                        style: const TextStyle(color: textGray, fontSize: 12),
+                        style: const TextStyle(color: AppColors.textGray, fontSize: 12),
                       ),
                     ],
                   ),
@@ -406,12 +392,12 @@ class _BillCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: bill.isActive
                         ? const Color(0xFF34C759)
-                        : textGray.withValues(alpha: 0.4),
+                        : AppColors.textGray.withValues(alpha: 0.4),
                     shape: BoxShape.circle,
                   ),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: textGray, size: 20),
+                  icon: const Icon(Icons.more_vert, color: AppColors.textGray, size: 20),
                   padding: EdgeInsets.zero,
                   onSelected: (value) {
                     if (value == 'edit') {
@@ -422,7 +408,7 @@ class _BillCard extends StatelessWidget {
                   },
                   itemBuilder: (ctx) => [
                     const PopupMenuItem(value: 'edit', child: Text('Edit Bill')),
-                    const PopupMenuItem(value: 'delete', child: Text('Delete Bill', style: TextStyle(color: errorRed))),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete Bill', style: TextStyle(color: AppColors.errorRed))),
                   ],
                 ),
               ],
@@ -446,7 +432,7 @@ class _BillCard extends StatelessWidget {
               Navigator.pop(ctx);
               onDelete();
             },
-            child: const Text('Delete', style: TextStyle(color: errorRed)),
+            child: const Text('Delete', style: TextStyle(color: AppColors.errorRed)),
           ),
         ],
       ),

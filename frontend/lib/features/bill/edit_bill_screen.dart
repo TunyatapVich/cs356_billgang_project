@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_colors.dart';
 import 'bill_provider.dart';
 import 'bill_service.dart';
 
@@ -13,16 +14,6 @@ class EditBillScreen extends ConsumerStatefulWidget {
 }
 
 class _EditBillScreenState extends ConsumerState<EditBillScreen> {
-  static const primaryBlue = Color(0xFF4E54C8);
-  static const bgLight = Color(0xFFF6F8FD);
-  static const cardWhite = Colors.white;
-  static const textDark = Color(0xFF2C3236);
-  static const textGray = Color(0xFF8E95A9);
-  static const inputBorder = Color(0xFFDCDFEA);
-  static const inputFill = Color(0xFFF2F4FC);
-  static const errorRed = Color(0xFFD94848);
-  static const selectedColor = Color(0xFF34C759);
-  static const dimColor = Color(0xFFE4E6FF);
 
   Bill? _bill;
   List<BillItem> _items = [];
@@ -109,18 +100,18 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLight,
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        backgroundColor: bgLight,
+        backgroundColor: AppColors.bgLight,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: primaryBlue),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
           onPressed: () => context.go('/'),
         ),
         title: Text(
           _bill?.name ?? 'Edit Bill',
-          style: const TextStyle(color: textDark, fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: AppColors.textDark, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         actions: [
           if (!_loading && _error == null)
@@ -128,7 +119,7 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
               onPressed: () => context.go('/bill/${widget.billId}/summary'),
               child: const Text(
                 'View Summary',
-                style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
         ],
@@ -146,12 +137,12 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, color: errorRed, size: 42),
+          const Icon(Icons.error_outline, color: AppColors.errorRed, size: 42),
           const SizedBox(height: 12),
-          Text(_error.toString(), style: const TextStyle(color: textGray)),
+          Text(_error.toString(), style: const TextStyle(color: AppColors.textGray)),
           const SizedBox(height: 16),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: primaryBlue, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
             onPressed: _loadData,
             child: const Text('Try Again'),
           ),
@@ -190,19 +181,19 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: inputBorder),
+        border: Border.all(color: AppColors.inputBorder),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: dimColor,
+              color: AppColors.dimBlue,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.receipt_long, color: primaryBlue, size: 18),
+            child: const Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -211,12 +202,12 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
               children: [
                 Text(
                   bill.name,
-                  style: const TextStyle(color: textDark, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${_members.length} member${_members.length == 1 ? '' : 's'}  ·  ${_formatDate(bill.date)}',
-                  style: const TextStyle(color: textGray, fontSize: 13),
+                  style: const TextStyle(color: AppColors.textGray, fontSize: 13),
                 ),
               ],
             ),
@@ -226,13 +217,13 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
             decoration: BoxDecoration(
               color: bill.isActive
                   ? const Color(0xFF34C759).withValues(alpha: 0.1)
-                  : textGray.withValues(alpha: 0.1),
+                  : AppColors.textGray.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               bill.isActive ? 'Active' : 'Settled',
               style: TextStyle(
-                color: bill.isActive ? const Color(0xFF34C759) : textGray,
+                color: bill.isActive ? const Color(0xFF34C759) : AppColors.textGray,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -248,23 +239,23 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cardWhite,
+          color: AppColors.cardWhite,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: inputBorder),
+          border: Border.all(color: AppColors.inputBorder),
         ),
         child: Row(
           children: [
-            const Icon(Icons.person_add_outlined, color: textGray, size: 18),
+            const Icon(Icons.person_add_outlined, color: AppColors.textGray, size: 18),
             const SizedBox(width: 8),
             const Expanded(
               child: Text(
                 'Invite members to assign items',
-                style: TextStyle(color: textGray, fontSize: 13),
+                style: TextStyle(color: AppColors.textGray, fontSize: 13),
               ),
             ),
             TextButton(
               onPressed: () => context.go('/bill/${widget.billId}/invite'),
-              child: const Text('Invite', style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
+              child: const Text('Invite', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
             ),
           ],
         ),
@@ -274,16 +265,16 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: inputBorder),
+        border: Border.all(color: AppColors.inputBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('Assign to', style: TextStyle(color: textGray, fontSize: 12, fontWeight: FontWeight.w600)),
+            child: Text('Assign to', style: TextStyle(color: AppColors.textGray, fontSize: 12, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 10),
           SingleChildScrollView(
@@ -304,16 +295,16 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: sel ? dimColor : inputFill,
+                            color: sel ? AppColors.dimBlue : AppColors.inputFill,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: sel ? primaryBlue : inputBorder,
+                              color: sel ? AppColors.primaryBlue : AppColors.inputBorder,
                               width: sel ? 2.5 : 1,
                             ),
                           ),
                           child: Center(
                             child: Text(m.avatar, style: TextStyle(
-                              color: sel ? primaryBlue : textGray,
+                              color: sel ? AppColors.primaryBlue : AppColors.textGray,
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             )),
@@ -321,7 +312,7 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
                         ),
                         const SizedBox(height: 5),
                         Text(m.name, style: TextStyle(
-                          color: sel ? primaryBlue : textGray,
+                          color: sel ? AppColors.primaryBlue : AppColors.textGray,
                           fontSize: 11,
                           fontWeight: sel ? FontWeight.bold : FontWeight.normal,
                         )),
@@ -342,24 +333,24 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
       return Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: cardWhite,
+          color: AppColors.cardWhite,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: inputBorder),
+          border: Border.all(color: AppColors.inputBorder),
         ),
         child: Column(
           children: [
-            const Icon(Icons.receipt_long, color: primaryBlue, size: 40),
+            const Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 40),
             const SizedBox(height: 12),
-            const Text('No items yet', style: TextStyle(color: textDark, fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('No items yet', style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            const Text('Add items to start assigning', style: TextStyle(color: textGray, fontSize: 13)),
+            const Text('Add items to start assigning', style: TextStyle(color: AppColors.textGray, fontSize: 13)),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: () => context.go('/bill/${widget.billId}/items'),
-              icon: const Icon(Icons.add, color: primaryBlue, size: 18),
-              label: const Text('Add Items', style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold)),
+              icon: const Icon(Icons.add, color: AppColors.primaryBlue, size: 18),
+              label: const Text('Add Items', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold)),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: primaryBlue),
+                side: const BorderSide(color: AppColors.primaryBlue),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
@@ -371,9 +362,9 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: inputBorder),
+        border: Border.all(color: AppColors.inputBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -382,12 +373,12 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               children: [
-                const Text('Items', style: TextStyle(color: textDark, fontSize: 15, fontWeight: FontWeight.bold)),
+                const Text('Items', style: TextStyle(color: AppColors.textDark, fontSize: 15, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 TextButton.icon(
                   onPressed: () => context.go('/bill/${widget.billId}/items'),
-                  icon: const Icon(Icons.add, color: primaryBlue, size: 16),
-                  label: const Text('Add', style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
+                  icon: const Icon(Icons.add, color: AppColors.primaryBlue, size: 16),
+                  label: const Text('Add', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
               ],
             ),
@@ -411,10 +402,10 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: sel ? selectedColor : Colors.transparent,
+                        color: sel ? AppColors.selectedGreen : Colors.transparent,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: sel ? selectedColor : textGray.withValues(alpha: 0.4),
+                          color: sel ? AppColors.selectedGreen : AppColors.textGray.withValues(alpha: 0.4),
                           width: 1.5,
                         ),
                       ),
@@ -426,18 +417,18 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(item.name, style: TextStyle(
-                            color: sel ? selectedColor : textDark,
+                            color: sel ? AppColors.selectedGreen : AppColors.textDark,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           )),
                           const SizedBox(height: 2),
                           Text('x${item.quantity}  ·  ฿${item.unitPrice.toStringAsFixed(0)}',
-                            style: const TextStyle(color: textGray, fontSize: 12)),
+                            style: const TextStyle(color: AppColors.textGray, fontSize: 12)),
                         ],
                       ),
                     ),
                     Text('฿${item.lineTotal.toStringAsFixed(0)}', style: TextStyle(
-                      color: sel ? selectedColor : primaryBlue,
+                      color: sel ? AppColors.selectedGreen : AppColors.primaryBlue,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     )),
@@ -455,33 +446,33 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: inputBorder),
+        border: Border.all(color: AppColors.inputBorder),
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Subtotal', style: TextStyle(color: textGray, fontSize: 14)),
-              Text('฿${_subtotal.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
+              const Text('Subtotal', style: TextStyle(color: AppColors.textGray, fontSize: 14)),
+              Text('฿${_subtotal.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
             ],
           ),
           const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Service ${_bill?.serviceChargePercent ?? 0}%', style: const TextStyle(color: textGray, fontSize: 14)),
-              Text('฿${_service.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
+              Text('Service ${_bill?.serviceChargePercent ?? 0}%', style: const TextStyle(color: AppColors.textGray, fontSize: 14)),
+              Text('฿${_service.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
             ],
           ),
           const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('VAT ${_bill?.vatPercent ?? 0}%', style: const TextStyle(color: textGray, fontSize: 14)),
-              Text('฿${_vat.toStringAsFixed(2)}', style: const TextStyle(color: textDark, fontSize: 14)),
+              Text('VAT ${_bill?.vatPercent ?? 0}%', style: const TextStyle(color: AppColors.textGray, fontSize: 14)),
+              Text('฿${_vat.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
             ],
           ),
           const Padding(
@@ -491,8 +482,8 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total', style: TextStyle(color: textDark, fontSize: 16, fontWeight: FontWeight.bold)),
-              Text('฿${_total.toStringAsFixed(2)}', style: const TextStyle(color: primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Total', style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold)),
+              Text('฿${_total.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
         ],
@@ -504,7 +495,7 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
     return Container(
       padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: AppColors.cardWhite,
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, -4))],
       ),
       child: Row(
@@ -515,8 +506,8 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
               icon: const Icon(Icons.person_add_outlined, size: 18),
               label: const Text('Invite', style: TextStyle(fontWeight: FontWeight.bold)),
               style: OutlinedButton.styleFrom(
-                foregroundColor: primaryBlue,
-                side: const BorderSide(color: primaryBlue),
+                foregroundColor: AppColors.primaryBlue,
+                side: const BorderSide(color: AppColors.primaryBlue),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
@@ -527,7 +518,7 @@ class _EditBillScreenState extends ConsumerState<EditBillScreen> {
             flex: 2,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
+                backgroundColor: AppColors.primaryBlue,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
