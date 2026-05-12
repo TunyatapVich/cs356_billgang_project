@@ -12,21 +12,27 @@ String get _baseUrl {
 }
 
 String get cloudinaryCloudName {
-  // Injected via --dart-define for security. Dev fallback only.
   const cloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME', defaultValue: '');
   if (cloudName.isEmpty) {
-    return 'ce514272ec89202990dbde5ac7eedf386b'; // dev fallback
+    return 'ce514272ec89202990dbde5ac7eedf386b';
   }
   return cloudName;
 }
 
-// Cloudinary upload preset — injected via --dart-define
-String get cloudinaryUploadPreset {
-  const preset = String.fromEnvironment('CLOUDINARY_UPLOAD_PRESET', defaultValue: '');
-  if (preset.isEmpty) {
-    return 'billgang_slips'; // dev fallback
+String get cloudinaryApiKey {
+  const apiKey = String.fromEnvironment('CLOUDINARY_API_KEY', defaultValue: '');
+  if (apiKey.isEmpty) {
+    throw Exception('CLOUDINARY_API_KEY not configured. Run with --dart-define=CLOUDINARY_API_KEY=your_api_key');
   }
-  return preset;
+  return apiKey;
+}
+
+String get cloudinaryApiSecret {
+  const apiSecret = String.fromEnvironment('CLOUDINARY_API_SECRET', defaultValue: '');
+  if (apiSecret.isEmpty) {
+    throw Exception('CLOUDINARY_API_SECRET not configured. Run with --dart-define=CLOUDINARY_API_SECRET=your_api_secret');
+  }
+  return apiSecret;
 }
 
 String get cloudinaryUploadUrl =>

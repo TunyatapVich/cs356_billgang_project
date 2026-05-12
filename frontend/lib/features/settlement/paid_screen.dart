@@ -584,7 +584,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _uploadingSlip = false);
-      _showSnackBar('อัพสลิปไม่สำเร็จ: ${e.toString()}');
+      _showSnackBar('อัพสลิปไม่สำเร็จ: ${e.toString().replaceFirst('Exception: ', '')}');
     }
   }
 }

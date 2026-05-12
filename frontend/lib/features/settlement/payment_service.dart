@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
@@ -44,25 +46,40 @@ final paymentServiceProvider = Provider<PaymentService>((ref) {
   return PaymentService(ref.read(authDioProvider));
 });
 
-// Cloudinary upload helper
+// Cloudinary upload helper (Signed)
 Future<String> uploadSlipToCloudinary(Uint8List imageBytes) async {
-  final dio = Dio();
+  final apiKey = cloudinaryApiKey;
+  final apiSecret = cloudinaryApiSecret;
+  final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+  // Generate SHA1 signature: apiSecret + timestamp + "image/upload" + preset name
+  final params = 'timestamp=$timestamp&upload_preset=billgang_slips';
+  final toSign = '$apiSecret$params';
+  final signature = sha1.convert(utf8.encode(toSign)).toString();
+
+  final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 30)));
   final formData = FormData.fromMap({
     'file': MultipartFile.fromBytes(
       imageBytes,
       filename: 'slip_${DateTime.now().millisecondsSinceEpoch}.jpg',
     ),
-    'upload_preset': cloudinaryUploadPreset,
+    'api_key': apiKey,
+    'timestamp': timestamp,
+    'upload_preset': 'billgang_slips',
+    'signature': signature,
   });
 
-  final response = await dio.post(
-    cloudinaryUploadUrl,
-    data: formData,
-    options: Options(
-      headers: {'Content-Type': 'multipart/form-data'},
-    ),
-  );
+  try {
+    final response = await dio.post(
+      cloudinaryUploadUrl,
+      data: formData,
+    );
 
-  final data = response.data as Map<String, dynamic>;
-  return data['secure_url'] as String;
+    final data = response.data as Map<String, dynamic>;
+    return data['secure_url'] as String;
+  } on DioException catch (e) {
+    final status = e.response?.statusCode;
+    final body = e.response?.data;
+    throw Exception('Cloudinary $status → $body');
+  }
 }
