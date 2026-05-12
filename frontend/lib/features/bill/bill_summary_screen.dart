@@ -118,8 +118,6 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(
         children: [
-          _buildHero(bill),
-          const SizedBox(height: 16),
           _buildMemberRow(bill),
           const SizedBox(height: 16),
           _buildBillCard(bill),
@@ -412,6 +410,8 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     );
   }
 
+  static const dimColor = Color(0xFFE4E6FF);
+
   Widget _buildPayButton() {
     return SizedBox(
       width: double.infinity,
@@ -423,13 +423,11 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        onPressed: () => context.go('/bill/${widget.billId}/assign'),
-        child: const Text('Assign & Pay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        onPressed: () => context.go('/bill/${widget.billId}/settlement'),
+        child: const Text('Pay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
     );
   }
-
-  static const dimColor = Color(0xFFE4E6FF);
 
   String _formatDate(DateTime date) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
