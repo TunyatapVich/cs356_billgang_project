@@ -361,14 +361,26 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
         final sel = notifier.isItemSelected(item);
         return GestureDetector(
           onTap: () async {
-            final ok = await notifier.toggleItem(widget.billId, index);
-            if (!ok && mounted) {
-              ScaffoldMessenger.of(this.context).showSnackBar(
-                const SnackBar(
-                  content: Text('Select a member first'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+            final messenger = ScaffoldMessenger.of(context);
+            try {
+              final ok = await notifier.toggleItem(widget.billId, index);
+              if (!ok && mounted) {
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Select a member first'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            } catch (_) {
+              if (mounted) {
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Failed to update item. Please try again.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
             }
           },
           child: AnimatedContainer(

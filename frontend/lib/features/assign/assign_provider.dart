@@ -120,7 +120,7 @@ class AssignNotifier extends Notifier<AssignState> {
     }
   }
 
-  /// Toggles item selection with real-time API call. Returns true if toggled.
+  /// Returns false if no member is selected; throws on API failure.
   Future<bool> toggleItem(String billId, int itemIndex) async {
     final memberId = state.selectedMemberId;
     if (memberId == null) return false;
@@ -159,15 +159,15 @@ class AssignNotifier extends Notifier<AssignState> {
         );
       }
       return true;
-    } catch (_) {
-      // Revert on failure
+    } catch (e) {
+      // Revert optimistic update then surface the real error
       state = state.copyWith(
         items: [
           for (var i = 0; i < state.items.length; i++)
             if (i == itemIndex) item else state.items[i],
         ],
       );
-      return false;
+      rethrow;
     }
   }
 
