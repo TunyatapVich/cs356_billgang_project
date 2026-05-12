@@ -15,6 +15,7 @@ class Bill {
   final double? vatPercent;
   final String? receiptImageUrl;
   final int memberCount;
+  final String? ownerPromptpay;
 
   const Bill({
     required this.id,
@@ -28,6 +29,7 @@ class Bill {
     this.vatPercent,
     this.receiptImageUrl,
     this.memberCount = 0,
+    this.ownerPromptpay,
   });
 
   bool get isActive => status.toLowerCase() == 'active';
@@ -44,6 +46,7 @@ class Bill {
     vatPercent: _toDouble(json['vat_pct'] ?? json['vatPct'] ?? json['VatPct']),
     receiptImageUrl: (json['receipt_image_url'] ?? json['receiptImageUrl'] ?? json['ReceiptImageUrl'])?.toString(),
     memberCount: (json['member_count'] ?? json['memberCount'] ?? json['MemberCount'] ?? 0) as int,
+    ownerPromptpay: (json['owner_promptpay'] ?? json['ownerPromptpay'] ?? json['OwnerPromptpay'])?.toString(),
   );
 }
 
