@@ -38,8 +38,6 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   @override
   void initState() {
     super.initState();
-    // DEBUG
-    print('[PAID] initState - toUserId: ${widget.toUserId}, toUserName: ${widget.toUserName}, amount: ${widget.amount}');
     _qrData = widget.qrData;
     _fetchedToUserName = widget.toUserName;
     if (_qrData == null) {
@@ -52,9 +50,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   Future<void> _loadQrData() async {
     setState(() { _loading = true; _error = null; });
     try {
-      print('[PAID] _loadQrData called');
       final currentUser = ref.read(authProvider).value;
-      print('[PAID] currentUser: ${currentUser?.id}');
       if (currentUser == null) throw Exception('Not authenticated');
       final result = await ref.read(paymentServiceProvider).create(
         billId: widget.billId,
@@ -70,9 +66,6 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
       setState(() => _loading = false);
     } catch (e) {
       if (!mounted) return;
-      // DEBUG
-      print('[PAID DEBUG] _loadQrData error: $e');
-      print('[PAID DEBUG] toUserId: ${widget.toUserId}, amount: ${widget.amount}');
       setState(() { _error = e; _loading = false; });
     }
   }
@@ -107,8 +100,6 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   }
 
   Widget _buildError() {
-    // DEBUG
-    print('[PAID DEBUG] _error: $_error, toUserName: $_fetchedToUserName, promptpay: $_promptpayNumber');
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),

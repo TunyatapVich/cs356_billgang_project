@@ -79,14 +79,6 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       final billData = results[0];
       final debtsData = results[1];
 
-      // DEBUG
-      print('[DEBUG] raw paid_by: ${(billData['bill'] as Map<String,dynamic>)['paid_by']}');
-      final membersRaw = (billData['members'] as List?);
-      print('[DEBUG] members count: ${membersRaw?.length}');
-      if (membersRaw != null && membersRaw.isNotEmpty) {
-        print('[DEBUG] first member: ${membersRaw.first}');
-      }
-
       final bill = Bill.fromJson(billData['bill'] as Map<String, dynamic>);
       final rawItems = (billData['items'] as List<dynamic>?) ?? [];
       final items = rawItems.cast<Map<String, dynamic>>().map(BillItem.fromJson).toList();
@@ -111,15 +103,9 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   }
 
   String get _payerName {
-    // DEBUG
-    print('[DEBUG] paidBy: ${_bill?.paidBy}, members count: ${_members.length}');
-    if (_members.isNotEmpty) {
-      print('[DEBUG] first member user_id: ${_members[0]['user_id']}');
-    }
     if (_bill?.paidBy == null) return 'User';
     final member = _members.where((m) => m['user_id'] == _bill!.paidBy).firstOrNull;
     final user = member?['user'] as Map<String, dynamic>?;
-    print('[DEBUG] found member: $member, user: $user');
     return (user?['display_name'] ?? user?['email'] ?? 'User') as String;
   }
 
@@ -491,10 +477,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         onPressed: canPay
-            ? () {
-                print('[DEBUG] NAVIGATE: payerId=$payerId, name=$_payerName, amount=${myOwed.toStringAsFixed(2)}');
-                context.go('/bill/${widget.billId}/paid/$payerId/${myOwed.toInt()}?amount=${myOwed.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}&rawAmount=${myOwed.toStringAsFixed(2)}');
-              }
+            ? () => context.go('/bill/${widget.billId}/paid/$payerId/${myOwed.toInt()}?amount=${myOwed.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}&rawAmount=${myOwed.toStringAsFixed(2)}')
             : null,
         child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),

@@ -109,8 +109,10 @@ export class BillService {
 
     if (!bill) throw new Error("NOT_FOUND");
 
+    const serialized = serializeBill({ ...bill, bill_items: undefined, bill_members: undefined });
+
     return {
-      bill: serializeBill({ ...bill, bill_items: undefined, bill_members: undefined }),
+      bill: serialized,
       items: bill.bill_items.map((item) => ({
         ...serializeItem(item),
         item_assigns: item.item_assigns,
