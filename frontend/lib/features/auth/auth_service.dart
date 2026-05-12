@@ -18,6 +18,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> register(
     String email,
+    String phone,
     String password,
     String passwordConfirm,
   ) async {
@@ -25,6 +26,7 @@ class AuthService {
       '/auth/register',
       data: {
         'email': email,
+        'promptpay_number': phone,
         'password': password,
         'password_confirm': passwordConfirm,
       },

@@ -50,6 +50,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
   // register() — same as login but for new account creation
   Future<void> register(
     String email,
+    String phone,
     String password,
     String passwordConfirm,
   ) async {
@@ -57,7 +58,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = await AsyncValue.guard(() async {
       final data = await ref
           .read(authServiceProvider)
-          .register(email, password, passwordConfirm);
+          .register(email, phone, password, passwordConfirm);
       await TokenStorage.save(data['token']);
       return User.fromJson(data['user'] as Map<String, dynamic>);
     });

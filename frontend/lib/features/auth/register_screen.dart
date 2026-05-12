@@ -11,6 +11,7 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordConfirmController = TextEditingController();
   String? _errorMessage;
@@ -26,12 +27,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   static const errorRed = Color(0xFFE84545);
 
   String? _emailError;
+  String? _phoneError;
   String? _passwordError;
   String? _confirmError;
 
   @override
   void dispose() {
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _passwordConfirmController.dispose();
     super.dispose();
@@ -41,6 +44,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     bool valid = true;
     setState(() {
       _emailError = null;
+      _phoneError = null;
       _passwordError = null;
       _confirmError = null;
     });
@@ -51,6 +55,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       valid = false;
     } else if (!RegExp(r'^[\w\.\-]+@[\w\.\-]+\.\w+$').hasMatch(email)) {
       setState(() => _emailError = 'Enter a valid email address');
+      valid = false;
+    }
+
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty) {
+      setState(() => _phoneError = 'PromptPay phone number is required');
+      valid = false;
+    } else if (!RegExp(r'^0\d{9}$').hasMatch(phone)) {
+      setState(() => _phoneError = 'Enter a valid 10-digit Thai phone number');
       valid = false;
     }
 
@@ -81,6 +94,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     setState(() => _errorMessage = null);
     await ref.read(authProvider.notifier).register(
           _emailController.text.trim(),
+          _phoneController.text.trim(),
           _passwordController.text,
           _passwordConfirmController.text,
         );
@@ -111,6 +125,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 _buildHeader(),
                 const SizedBox(height: 32),
                 _buildEmailField(),
+                const SizedBox(height: 16),
+                _buildPhoneField(),
                 const SizedBox(height: 16),
                 _buildPasswordField(),
                 const SizedBox(height: 16),
@@ -154,6 +170,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       keyboardType: TextInputType.emailAddress,
       prefixIcon: Icons.email_outlined,
       errorText: _emailError,
+    );
+  }
+
+  Widget _buildPhoneField() {
+    return _buildTextField(
+      controller: _phoneController,
+      hintText: 'PromptPay phone number (e.g. 0812345678)',
+      keyboardType: TextInputType.phone,
+      prefixIcon: Icons.phone_android_outlined,
+      errorText: _phoneError,
     );
   }
 
