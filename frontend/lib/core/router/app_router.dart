@@ -15,7 +15,7 @@ import '../../features/assign/assign_screen.dart';
 import '../../features/invite/invite_screen.dart';
 import '../../features/invite/join_screen.dart';
 import '../../features/settlement/settlement_screen.dart';
-import '../../features/settlement/promptpay_screen.dart';
+import '../../features/settlement/paid_screen.dart';
 import '../../features/splash/splash_screen.dart';
 
 /// Listens to authProvider and notifies GoRouter to re-run redirect
@@ -114,8 +114,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             SettlementScreen(billId: state.pathParameters['id']!),
       ),
       GoRoute(
-        path: '/bill/:id/promptpay/:toUserId/:amount',
-        builder: (context, state) => PromptpayScreen(
+        path: '/bill/:id/paid/:toUserId/:amount',
+        builder: (context, state) => PaidScreen(
           billId: state.pathParameters['id']!,
           toUserId: state.pathParameters['toUserId']!,
           toUserName: state.uri.queryParameters['name'] ?? 'Unknown',

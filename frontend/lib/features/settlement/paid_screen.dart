@@ -5,8 +5,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/theme/app_colors.dart';
 import 'payment_service.dart';
 
-class PromptpayScreen extends ConsumerStatefulWidget {
-  const PromptpayScreen({
+class PaidScreen extends ConsumerStatefulWidget {
+  const PaidScreen({
     super.key,
     required this.billId,
     required this.toUserId,
@@ -22,10 +22,10 @@ class PromptpayScreen extends ConsumerStatefulWidget {
   final String? qrData;
 
   @override
-  ConsumerState<PromptpayScreen> createState() => _PromptpayScreenState();
+  ConsumerState<PaidScreen> createState() => _PaidScreenState();
 }
 
-class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
+class _PaidScreenState extends ConsumerState<PaidScreen> {
   String? _qrData;
   String? _promptpayNumber;
   bool _loading = true;
@@ -71,7 +71,7 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
-          onPressed: () => context.go('/bill/${widget.billId}/summary'),
+          onPressed: () => context.go('/bill/${widget.billId}/settlement'),
         ),
         title: const Text(
           'Pay',
@@ -125,6 +125,8 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(
         children: [
+          _buildHeader(),
+          const SizedBox(height: 20),
           _buildQrCard(),
           if (_promptpayNumber != null) ...[
             const SizedBox(height: 20),
@@ -132,6 +134,40 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
           ],
           const SizedBox(height: 32),
           _buildDoneButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.inputBorder),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'Pay',
+            style: TextStyle(color: AppColors.textGray, fontSize: 13),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '฿${widget.amount.toStringAsFixed(2)}',
+            style: const TextStyle(
+              color: AppColors.textDark,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'to ${widget.toUserName}',
+            style: const TextStyle(color: AppColors.primaryBlue, fontSize: 16, fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
@@ -226,9 +262,9 @@ class _PromptpayScreenState extends ConsumerState<PromptpayScreen> {
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        onPressed: () => context.go('/bill/${widget.billId}/summary'),
+        onPressed: () => context.go('/bill/${widget.billId}/settlement'),
         child: const Text(
-          'Done',
+          "I've Paid",
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
       ),

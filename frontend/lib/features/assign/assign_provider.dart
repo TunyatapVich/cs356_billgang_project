@@ -222,33 +222,31 @@ class AssignNotifier extends Notifier<AssignState> {
   }
 
   void _applyAssign(String itemId, String userId) {
+    final item = state.items.where((i) => i.id == itemId).firstOrNull;
+    if (item == null) return;
+    if (item.assignedTo?.contains(userId) ?? false) return; // already present, no-op
     state = state.copyWith(
       items: [
-        for (final item in state.items)
-          if (item.id == itemId)
-            item.copyWith(
-              assignedTo: (item.assignedTo?.contains(userId) ?? false)
-                  ? item.assignedTo
-                  : [...(item.assignedTo ?? []), userId],
-            )
+        for (final i in state.items)
+          if (i.id == itemId)
+            i.copyWith(assignedTo: [...(i.assignedTo ?? []), userId])
           else
-            item,
+            i,
       ],
     );
   }
 
   void _applyUnassign(String itemId, String userId) {
+    final item = state.items.where((i) => i.id == itemId).firstOrNull;
+    if (item == null) return;
+    if (!(item.assignedTo?.contains(userId) ?? false)) return; // already absent, no-op
     state = state.copyWith(
       items: [
-        for (final item in state.items)
-          if (item.id == itemId)
-            item.copyWith(
-              assignedTo: (item.assignedTo?.contains(userId) ?? false)
-                  ? item.assignedTo!.where((id) => id != userId).toList()
-                  : item.assignedTo,
-            )
+        for (final i in state.items)
+          if (i.id == itemId)
+            i.copyWith(assignedTo: i.assignedTo!.where((id) => id != userId).toList())
           else
-            item,
+            i,
       ],
     );
   }
