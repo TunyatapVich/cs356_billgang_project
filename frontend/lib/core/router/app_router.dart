@@ -100,7 +100,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/bill/:id/invite',
-        builder: (context, state) => const InviteScreen(),
+        builder: (context, state) =>
+            InviteScreen(billId: state.pathParameters['id']!),
       ),
       // GoRoute(path: '/bill/:id/assign', builder: (_, __) => const Placeholder()),
       // GoRoute(path: '/bill/:id/settlement', builder: (_, __) => const Placeholder()),

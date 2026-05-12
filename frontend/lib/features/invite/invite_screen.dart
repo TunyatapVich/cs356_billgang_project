@@ -6,7 +6,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/api/api_client.dart';
 
 class InviteScreen extends ConsumerStatefulWidget {
-  const InviteScreen({super.key});
+  const InviteScreen({super.key, required this.billId});
+  final String billId;
 
   @override
   ConsumerState<InviteScreen> createState() => _InviteScreenState();
@@ -26,15 +27,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   }
 
   Future<void> _loadCode() async {
-    final billId = GoRouterState.of(context).pathParameters['id'];
-    if (billId == null || billId.isEmpty) {
-      setState(() {
-        _loading = false;
-        _error = 'Bill not found';
-      });
-      return;
-    }
-    _billId = billId;
+    _billId = widget.billId;
 
     setState(() {
       _loading = true;
