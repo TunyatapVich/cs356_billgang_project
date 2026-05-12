@@ -147,169 +147,130 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   }
 
   Widget _buildMemberRow(Bill bill) {
-    return ClipPath(
-      clipper: _JaggedTopClipper(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: const BoxDecoration(
-          color: AppColors.cardWhite,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: const BoxDecoration(
+        color: AppColors.cardWhite,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
         ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  bill.name,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  _formatDate(bill.date),
-                  style: const TextStyle(color: AppColors.textGray, fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 1,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: AppColors.textGray.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.textGray.withValues(alpha: 0.3)),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                Container(
-                  width: 6,
-                  height: 6,
-                  margin: const EdgeInsets.only(left: 4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.textGray.withValues(alpha: 0.3)),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                Container(
-                  width: 6,
-                  height: 6,
-                  margin: const EdgeInsets.only(left: 4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.textGray.withValues(alpha: 0.3)),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ),
-          ],
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.textGray,
+            width: 2,
+          ),
         ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            bill.name,
+            style: const TextStyle(
+              color: AppColors.textDark,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            _formatDate(bill.date),
+            style: const TextStyle(color: AppColors.textGray, fontSize: 13),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildBillCard(Bill bill) {
-    return ClipPath(
-      clipper: _BillCardClipper(),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.cardWhite,
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(12),
+          bottomRight: Radius.circular(12),
         ),
-        child: Column(
-          children: [
-            // Items section
-            if (_items.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Items',
-                      style: TextStyle(
-                        color: AppColors.textDark,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${_items.length} item${_items.length == 1 ? '' : 's'}',
-                      style: const TextStyle(color: AppColors.textGray, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: Column(
-                  children: [
-                    ..._items.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.name,
-                              style: const TextStyle(color: AppColors.textDark, fontSize: 13),
-                            ),
-                          ),
-                          Text(
-                            'x${item.quantity}',
-                            style: const TextStyle(color: AppColors.textGray, fontSize: 12),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            '฿${item.lineTotal.toStringAsFixed(2)}',
-                            style: const TextStyle(color: AppColors.textDark, fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    )),
-                    _buildDashedDivider(),
-                  ],
-                ),
-              ),
-            ],
-            // Totals section
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Items section
+          if (_items.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Row(
+                children: [
+                  const Text(
+                    'Items',
+                    style: TextStyle(
+                      color: AppColors.textDark,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${_items.length} item${_items.length == 1 ? '' : 's'}',
+                    style: const TextStyle(color: AppColors.textGray, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Column(
                 children: [
+                  ..._items.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            style: const TextStyle(color: AppColors.textDark, fontSize: 13),
+                          ),
+                        ),
+                        Text(
+                          'x${item.quantity}',
+                          style: const TextStyle(color: AppColors.textGray, fontSize: 12),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          '฿${item.lineTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(color: AppColors.textDark, fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  )),
                   _buildDashedDivider(),
-                  const SizedBox(height: 12),
-                  _buildTotalRow('Subtotal', _subtotal, isBold: false),
-                  const SizedBox(height: 6),
-                  _buildTotalRow('Service ${bill.serviceChargePercent ?? 0}%', _service, isBold: false),
-                  const SizedBox(height: 6),
-                  _buildTotalRow('VAT ${bill.vatPercent ?? 0}%', _vat, isBold: false),
-                  const SizedBox(height: 12),
-                  Container(
-                    height: 1,
-                    color: AppColors.textDark,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildTotalRow('Total', _total, isBold: true, isTotal: true),
                 ],
               ),
             ),
           ],
-        ),
+          // Totals section
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                _buildTotalRow('Subtotal', _subtotal, isBold: false),
+                const SizedBox(height: 6),
+                _buildTotalRow('Service ${bill.serviceChargePercent ?? 0}%', _service, isBold: false),
+                const SizedBox(height: 6),
+                _buildTotalRow('VAT ${bill.vatPercent ?? 0}%', _vat, isBold: false),
+                const SizedBox(height: 12),
+                _buildDashedDivider(),
+                const SizedBox(height: 12),
+                _buildTotalRow('Total', _total, isBold: true, isTotal: true),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -499,73 +460,4 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
-}
-
-class _JaggedTopClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    final notchCount = 12;
-    final notchWidth = size.width / notchCount;
-    final notchDepth = 6.0;
-
-    path.moveTo(0, notchDepth);
-    for (int i = 0; i < notchCount; i++) {
-      final x1 = notchWidth * i + notchWidth / 2;
-      final y1 = 0.0;
-      final x2 = notchWidth * (i + 1);
-      final y2 = notchDepth;
-      path.lineTo(x1, y1);
-      path.lineTo(x2, y2);
-    }
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-class _BillCardClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    final notchCount = 14;
-    final notchWidth = size.width / notchCount;
-    final notchDepth = 5.0;
-
-    // Top edge (jagged)
-    path.moveTo(0, notchDepth);
-    for (int i = 0; i < notchCount; i++) {
-      final x1 = notchWidth * i + notchWidth / 2;
-      final y1 = 0.0;
-      final x2 = notchWidth * (i + 1);
-      final y2 = notchDepth;
-      path.lineTo(x1, y1);
-      path.lineTo(x2, y2);
-    }
-
-    // Right edge
-    path.lineTo(size.width, size.height - notchDepth);
-
-    // Bottom edge (jagged inverted)
-    for (int i = notchCount - 1; i >= 0; i--) {
-      final x1 = notchWidth * i + notchWidth / 2;
-      final y1 = size.height;
-      final x2 = notchWidth * (i + 1);
-      final y2 = size.height - notchDepth;
-      path.lineTo(x2, y2);
-      path.lineTo(x1, y1);
-    }
-
-    // Left edge
-    path.lineTo(0, notchDepth);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
