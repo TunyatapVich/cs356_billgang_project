@@ -53,7 +53,9 @@ class AssignState {
   }
 
   String? get selectedMemberId =>
-      members.isNotEmpty ? members[selectedMemberIndex].id : null;
+      selectedMemberIndex >= 0 && selectedMemberIndex < members.length
+          ? members[selectedMemberIndex].id
+          : null;
 }
 
 // ── AssignNotifier ────────────────────────────────────────────────────────────
@@ -61,6 +63,7 @@ class AssignState {
 class AssignNotifier extends Notifier<AssignState> {
   SocketClient? _socket;
   StreamSubscription? _socketSub;
+  String? _billId;
 
   @override
   AssignState build() {
@@ -74,6 +77,7 @@ class AssignNotifier extends Notifier<AssignState> {
   BillService get _billService => ref.read(billServiceProvider);
 
   Future<void> loadBill(String billId) async {
+    _billId = billId;
     state = state.copyWith(loading: true, error: null);
 
     try {
@@ -108,6 +112,16 @@ class AssignNotifier extends Notifier<AssignState> {
           final avatar = name.isNotEmpty ? name[0].toUpperCase() : 'U';
           members = [AssignMember(id: currentUser.id, name: name, avatar: avatar)];
         }
+      } else {
+        // Ensure the current user is present in the members list; if not,
+        // append them so they can still assign items to themselves.
+        final currentUser = ref.read(authProvider).value;
+        if (currentUser != null &&
+            !members.any((m) => m.id == currentUser.id)) {
+          final name = currentUser.displayName ?? currentUser.email;
+          final avatar = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+          members.add(AssignMember(id: currentUser.id, name: name, avatar: avatar));
+        }
       }
 
       // paid_by comes from the serialized bill; fall back to created_by for new bills
@@ -129,9 +143,9 @@ class AssignNotifier extends Notifier<AssignState> {
   }
 
   void selectMember(int index) {
-    if (index >= 0 && index < state.members.length) {
-      state = state.copyWith(selectedMemberIndex: index);
-    }
+    if (state.members.isEmpty) return;
+    final validIndex = index.clamp(-1, state.members.length - 1);
+    state = state.copyWith(selectedMemberIndex: validIndex);
   }
 
   /// Returns false if no member is selected; throws on API failure.
@@ -189,12 +203,14 @@ class AssignNotifier extends Notifier<AssignState> {
       item.assignedTo?.contains(state.selectedMemberId) ?? false;
 
   Future<void> setPayer(String billId, String payerId) async {
+    if (payerId == state.payerId) return;
     final previous = state.payerId;
     state = state.copyWith(payerId: payerId);
     try {
       await _billService.setPayer(billId: billId, payerId: payerId);
-    } catch (_) {
+    } catch (e) {
       state = state.copyWith(payerId: previous);
+      rethrow;
     }
   }
 
@@ -232,12 +248,12 @@ class AssignNotifier extends Notifier<AssignState> {
         break;
       case 'payer_set':
         final payerId = event['paid_by'] as String?;
-        if (payerId != null) {
+        if (payerId != null && payerId != state.payerId) {
           state = state.copyWith(payerId: payerId);
         }
         break;
       case 'member_joined':
-        // Refetch to pick up new member
+        if (_billId != null) loadBill(_billId!);
         break;
     }
   }

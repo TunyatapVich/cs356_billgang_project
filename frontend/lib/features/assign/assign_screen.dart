@@ -144,9 +144,17 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                   trailing: isSelected
                       ? const Icon(Icons.check, color: AppColors.primaryBlue)
                       : null,
-                  onTap: () {
-                    ref.read(assignProvider.notifier).setPayer(widget.billId, m.id);
-                    Navigator.pop(ctx);
+                  onTap: () async {
+                    try {
+                      await ref.read(assignProvider.notifier).setPayer(widget.billId, m.id);
+                    } catch (_) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Failed to update payer. Please try again.')),
+                        );
+                      }
+                    }
+                    if (mounted) Navigator.pop(ctx);
                   },
                 );
               }),
