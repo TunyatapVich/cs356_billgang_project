@@ -209,111 +209,58 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     );
 
     return Container(
+      width: 350,
       decoration: BoxDecoration(
-        color: AppColors.promptpayGreen,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: AppColors.promptpayGreen.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Green header with PromptPay label and amount
+          // 1. Blue banner with Thai QR logo - full width
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 16),
             decoration: const BoxDecoration(
-              color: AppColors.promptpayGreen,
+              color: AppColors.thaiQRBlue,
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
               ),
             ),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.qr_code, color: Colors.white, size: 16),
-                      SizedBox(width: 6),
-                      Text(
-                        'PromptPay',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '฿${(widget.rawAmount ?? widget.amount.toStringAsFixed(2))}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+            child: Image.asset(
+              'assets/header.png',
+              fit: BoxFit.cover,
             ),
           ),
-          // White QR area
+          // 2. QR Code with PromptPay logo centered inside
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
+            width: 200,
+            height: 200,
+            margin: const EdgeInsets.symmetric(vertical: 20),
+            decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
+              border: Border.all(color: AppColors.inputBorder),
             ),
-            child: Column(
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.promptpayGreen.withValues(alpha: 0.2),
-                      width: 2,
-                    ),
-                  ),
-                  child: QrImageView(
-                    data: qrPayload,
-                    version: QrVersions.auto,
-                    size: 180,
-                    backgroundColor: Colors.white,
-                    eyeStyle: const QrEyeStyle(
-                      eyeShape: QrEyeShape.square,
-                      color: AppColors.promptpayGreen,
-                    ),
-                    dataModuleStyle: const QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.square,
-                      color: AppColors.promptpayGreen,
-                    ),
-                  ),
+                QrImageView(
+                  data: qrPayload,
+                  version: QrVersions.auto,
+                  size: 200,
+                  backgroundColor: Colors.white,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'สแกนจ่ายได้ทันที',
-                  style: TextStyle(
-                    color: AppColors.promptpayGreen.withValues(alpha: 0.8),
-                    fontSize: 13,
-                  ),
+                // PromptPay logo centered on top of QR
+                Image.asset(
+                  'assets/logo.png',
+                  height: 38,
                 ),
               ],
             ),
