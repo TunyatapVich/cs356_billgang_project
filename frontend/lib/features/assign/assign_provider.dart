@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../auth/auth_provider.dart';
 import '../bill/bill_provider.dart';
 import '../bill/bill_service.dart';
 import '../../core/socket/socket_client.dart';
+import '../../core/storage/token_storage.dart';
 
 // ── Member model for assign screen ────────────────────────────────────────────
 
@@ -16,50 +18,44 @@ class AssignMember {
 // ── Assign state ──────────────────────────────────────────────────────────────
 
 class AssignState {
-  final List<BillItem> items; // current local state (may have unsaved changes)
-  final List<BillItem> originalItems; // last saved state from server
+  final List<BillItem> items;
   final List<AssignMember> members;
   final int selectedMemberIndex;
   final String? payerId;
   final bool loading;
-  final bool saving; // true while saveAssignments is running
   final Object? error;
 
   const AssignState({
     this.items = const [],
-    this.originalItems = const [],
     this.members = const [],
     this.selectedMemberIndex = 0,
     this.payerId,
     this.loading = true,
-    this.saving = false,
     this.error,
   });
 
   AssignState copyWith({
     List<BillItem>? items,
-    List<BillItem>? originalItems,
     List<AssignMember>? members,
     int? selectedMemberIndex,
     String? payerId,
     bool? loading,
-    bool? saving,
     Object? error,
   }) {
     return AssignState(
       items: items ?? this.items,
-      originalItems: originalItems ?? this.originalItems,
       members: members ?? this.members,
       selectedMemberIndex: selectedMemberIndex ?? this.selectedMemberIndex,
       payerId: payerId ?? this.payerId,
       loading: loading ?? this.loading,
-      saving: saving ?? this.saving,
       error: error,
     );
   }
 
   String? get selectedMemberId =>
-      members.isNotEmpty ? members[selectedMemberIndex].id : null;
+      selectedMemberIndex >= 0 && selectedMemberIndex < members.length
+          ? members[selectedMemberIndex].id
+          : null;
 }
 
 // ── AssignNotifier ────────────────────────────────────────────────────────────
@@ -67,6 +63,7 @@ class AssignState {
 class AssignNotifier extends Notifier<AssignState> {
   SocketClient? _socket;
   StreamSubscription? _socketSub;
+  String? _billId;
 
   @override
   AssignState build() {
@@ -80,6 +77,7 @@ class AssignNotifier extends Notifier<AssignState> {
   BillService get _billService => ref.read(billServiceProvider);
 
   Future<void> loadBill(String billId) async {
+    _billId = billId;
     state = state.copyWith(loading: true, error: null);
 
     try {
@@ -91,7 +89,7 @@ class AssignNotifier extends Notifier<AssignState> {
           .toList();
 
       final membersRaw = (data['members'] as List<dynamic>?) ?? [];
-      final members = membersRaw.cast<Map<String, dynamic>>().map((m) {
+      var members = membersRaw.cast<Map<String, dynamic>>().map((m) {
         final user = m['user'] as Map<String, dynamic>? ?? {};
         final displayName =
             (user['display_name'] ?? user['email'] ?? 'U') as String;
@@ -102,18 +100,48 @@ class AssignNotifier extends Notifier<AssignState> {
           name: displayName,
           avatar: initials,
         );
-      }).toList();
+      }).where((m) => m.id.isNotEmpty).toList();
 
-      // paid_by comes from the serialized bill
+      // Fallback: API should always include the current user as a member,
+      // but if parsing fails or the list is empty, synthesise an entry so
+      // the user can still assign items to themselves.
+      if (members.isEmpty) {
+        final currentUser = ref.read(authProvider).value;
+        if (currentUser != null) {
+          final name = currentUser.displayName ?? currentUser.email;
+          final avatar = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+          members = [AssignMember(id: currentUser.id, name: name, avatar: avatar)];
+        }
+      } else {
+        // Ensure the current user is present in the members list; if not,
+        // append them so they can still assign items to themselves.
+        final currentUser = ref.read(authProvider).value;
+        if (currentUser != null &&
+            !members.any((m) => m.id == currentUser.id)) {
+          final name = currentUser.displayName ?? currentUser.email;
+          final avatar = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+          members.add(AssignMember(id: currentUser.id, name: name, avatar: avatar));
+        }
+      }
+
+      // paid_by comes from the serialized bill; fall back to created_by for new bills
       final billData = data['bill'] as Map<String, dynamic>?;
-      final payerId = (billData?['paid_by'] ?? data['paid_by'])?.toString();
+      final payerId = (billData?['paid_by'] ?? billData?['created_by'])?.toString();
+
+      // Pre-select the current user if they are in the members list,
+      // otherwise default to index 0.
+      final currentUser = ref.read(authProvider).value;
+      int selectedIdx = 0;
+      if (currentUser != null) {
+        final idx = members.indexWhere((m) => m.id == currentUser.id);
+        if (idx >= 0) selectedIdx = idx;
+      }
 
       state = state.copyWith(
         items: items,
-        originalItems: items,
         members: members,
         payerId: payerId,
-        selectedMemberIndex: 0,
+        selectedMemberIndex: selectedIdx,
         loading: false,
       );
 
@@ -124,13 +152,13 @@ class AssignNotifier extends Notifier<AssignState> {
   }
 
   void selectMember(int index) {
-    if (index >= 0 && index < state.members.length) {
-      state = state.copyWith(selectedMemberIndex: index);
-    }
+    if (state.members.isEmpty) return;
+    final validIndex = index.clamp(-1, state.members.length - 1);
+    state = state.copyWith(selectedMemberIndex: validIndex);
   }
 
-  /// Toggles item selection locally (no API call). Returns true if toggled.
-  bool toggleItem(int itemIndex) {
+  /// Returns false if no member is selected; throws on API failure.
+  Future<bool> toggleItem(String billId, int itemIndex) async {
     final memberId = state.selectedMemberId;
     if (memberId == null) return false;
 
@@ -138,6 +166,7 @@ class AssignNotifier extends Notifier<AssignState> {
     final assigned = List<String>.from(item.assignedTo ?? []);
     final isCurrentlyAssigned = assigned.contains(memberId);
 
+    // Optimistic update
     state = state.copyWith(
       items: [
         for (var i = 0; i < state.items.length; i++)
@@ -151,89 +180,90 @@ class AssignNotifier extends Notifier<AssignState> {
             state.items[i],
       ],
     );
-    return true;
+
+    try {
+      if (isCurrentlyAssigned) {
+        await _billService.unassignItem(
+          billId: billId,
+          itemId: item.id,
+          userId: memberId,
+        );
+      } else {
+        await _billService.assignItem(
+          billId: billId,
+          itemId: item.id,
+          userId: memberId,
+        );
+      }
+      return true;
+    } catch (e) {
+      // Revert optimistic update then surface the real error
+      state = state.copyWith(
+        items: [
+          for (var i = 0; i < state.items.length; i++)
+            if (i == itemIndex) item else state.items[i],
+        ],
+      );
+      rethrow;
+    }
   }
 
   bool isItemSelected(BillItem item) =>
       item.assignedTo?.contains(state.selectedMemberId) ?? false;
 
-  /// Diffs current items against originalItems and syncs only changed assignments.
-  Future<void> saveAssignments(String billId) async {
-    state = state.copyWith(saving: true, error: null);
-
-    try {
-      for (var i = 0; i < state.items.length; i++) {
-        final current = state.items[i];
-        final original = state.originalItems.length > i ? state.originalItems[i] : null;
-        if (original == null) continue;
-
-        final currentSet = Set<String>.from(current.assignedTo ?? []);
-        final originalSet = Set<String>.from(original.assignedTo ?? []);
-
-        if (currentSet.difference(originalSet).isNotEmpty) {
-          for (final userId in currentSet.difference(originalSet)) {
-            await _billService.assignItem(billId: billId, itemId: current.id, userId: userId);
-          }
-        }
-        if (originalSet.difference(currentSet).isNotEmpty) {
-          for (final userId in originalSet.difference(currentSet)) {
-            await _billService.unassignItem(billId: billId, itemId: current.id, userId: userId);
-          }
-        }
-      }
-
-      state = state.copyWith(saving: false, originalItems: List.from(state.items));
-    } catch (e) {
-      state = state.copyWith(saving: false, error: e);
-    }
-  }
-
-  void setPayer(String billId, String payerId) async {
+  Future<void> setPayer(String billId, String payerId) async {
+    if (payerId == state.payerId) return;
+    final previous = state.payerId;
     state = state.copyWith(payerId: payerId);
     try {
       await _billService.setPayer(billId: billId, payerId: payerId);
-    } catch (_) {
-      // WebSocket will update us on success; on failure just revert
+    } catch (e) {
+      state = state.copyWith(payerId: previous);
+      rethrow;
     }
   }
 
-  void _connectSocket(String billId) {
+  Future<void> _connectSocket(String billId) async {
     _socketSub?.cancel();
     _socket?.disconnect();
 
+    final token = await TokenStorage.read() ?? '';
     _socket = SocketClient();
-    _socket!.connect(billId, ''); // token handled server-side via cookie
-    _socket!.stream.listen(_handleSocketEvent);
+    _socket!.connect(billId, token);
+    _socketSub = _socket!.stream.listen(_handleSocketEvent);
   }
 
   void _handleSocketEvent(Map<String, dynamic> event) {
     final type = event['type'] as String?;
-    final itemId = event['item_id'] as String?;
-    final userId = event['user_id'] as String?;
-
-    if (itemId == null || userId == null) return;
 
     switch (type) {
       case 'item_assigned':
-        _applyAssign(itemId, userId);
+        final itemId = event['item_id'] as String?;
+        final userId = event['user_id'] as String?;
+        if (itemId != null && userId != null) _applyAssign(itemId, userId);
         break;
       case 'item_unassigned':
-        _applyUnassign(itemId, userId);
-        break;
-      case 'item_added':
-        // Refetch bill to get new item with full data
-        // For now, ignore - new items will appear on next load
+        final itemId = event['item_id'] as String?;
+        final userId = event['user_id'] as String?;
+        if (itemId != null && userId != null) _applyUnassign(itemId, userId);
         break;
       case 'item_removed':
-        state = state.copyWith(
-          items: state.items.where((i) => i.id != itemId).toList(),
-        );
+        final itemId = event['item_id'] as String?;
+        if (itemId != null) {
+          state = state.copyWith(
+            items: state.items.where((i) => i.id != itemId).toList(),
+          );
+        }
         break;
       case 'payer_set':
         final payerId = event['paid_by'] as String?;
-        if (payerId != null) {
+        if (payerId != null && payerId != state.payerId) {
           state = state.copyWith(payerId: payerId);
         }
+        break;
+      case 'member_joined':
+        if (_billId != null) loadBill(_billId!);
+        ref.read(billListProvider.notifier).refreshBills();
         break;
     }
   }

@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/socket/socket_client.dart';
+import '../../core/storage/token_storage.dart';
 import '../../core/theme/app_colors.dart';
+import '../auth/auth_provider.dart';
 import 'bill_provider.dart';
 import 'bill_service.dart';
 
@@ -14,10 +18,13 @@ class BillSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
+  SocketClient? _socket;
+  StreamSubscription? _socketSub;
 
   Bill? _bill;
   List<BillItem> _items = [];
   List<Map<String, dynamic>> _members = [];
+  List<Map<String, dynamic>> _perPerson = [];
   bool _loading = true;
   Object? _error;
 
@@ -25,6 +32,35 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   void initState() {
     super.initState();
     _loadBill();
+    _connectSocket();
+  }
+
+  @override
+  void dispose() {
+    _socketSub?.cancel();
+    _socket?.disconnect();
+    super.dispose();
+  }
+
+  Future<void> _connectSocket() async {
+    final token = await TokenStorage.read() ?? '';
+    _socket = SocketClient();
+    _socket!.connect(widget.billId, token);
+    _socketSub = _socket!.stream.listen(_handleSocketEvent);
+  }
+
+  void _handleSocketEvent(Map<String, dynamic> event) {
+    final type = event['type'] as String?;
+    if (type == 'payer_set') {
+      final newPayerId = event['paid_by'] as String?;
+      if (newPayerId != null && mounted) {
+        setState(() {
+          _bill = _bill?.copyWith(paidBy: newPayerId);
+        });
+      }
+    } else if (type == 'bill_updated') {
+      _loadBill();
+    }
   }
 
   Future<void> _loadBill() async {
@@ -34,17 +70,27 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     });
 
     try {
-      final data = await ref.read(billServiceProvider).getBill(widget.billId);
-      final bill = Bill.fromJson(data);
-      final rawItems = (data['items'] as List<dynamic>?) ?? [];
+      final service = ref.read(billServiceProvider);
+      final results = await Future.wait<Map<String, dynamic>>([
+        service.getBill(widget.billId),
+        service.getDebts(widget.billId),
+      ]);
+
+      final billData = results[0];
+      final debtsData = results[1];
+
+      final bill = Bill.fromJson(billData['bill'] as Map<String, dynamic>);
+      final rawItems = (billData['items'] as List<dynamic>?) ?? [];
       final items = rawItems.cast<Map<String, dynamic>>().map(BillItem.fromJson).toList();
-      final members = (data['members'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+      final members = (billData['members'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+      final perPerson = (debtsData['per_person'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
 
       if (!mounted) return;
       setState(() {
         _bill = bill;
         _items = items;
         _members = members;
+        _perPerson = perPerson;
         _loading = false;
       });
     } catch (e) {
@@ -134,99 +180,30 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     );
   }
 
-  Widget _buildHero(Bill bill) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: const BoxDecoration(
-            color: Color(0xFFE4E6FF),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 36),
-        ),
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: bill.isActive
-                  ? const Color(0xFF34C759)
-                  : AppColors.textGray.withValues(alpha: 0.5),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: (bill.isActive ? const Color(0xFF34C759) : AppColors.textGray).withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.check, color: Colors.white, size: 14),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildMemberRow(Bill bill) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: const BoxDecoration(
         color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE4E6FF),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.group, color: AppColors.primaryBlue, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  bill.name,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${bill.memberCount} member${bill.memberCount == 1 ? '' : 's'}  ·  ${_formatDate(bill.date)}',
-                  style: const TextStyle(color: AppColors.textGray, fontSize: 13),
-                ),
-              ],
+          Text(
+            bill.name,
+            style: const TextStyle(
+              color: AppColors.textDark,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: bill.isActive
-                  ? const Color(0xFF34C759).withValues(alpha: 0.1)
-                  : AppColors.textGray.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              bill.isActive ? 'Active' : 'Settled',
-              style: TextStyle(
-                color: bill.isActive ? const Color(0xFF34C759) : AppColors.textGray,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          Text(
+            _formatDate(bill.date),
+            style: const TextStyle(color: AppColors.textGray, fontSize: 13),
           ),
         ],
       ),
@@ -237,7 +214,10 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(12),
+          bottomRight: Radius.circular(12),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -258,85 +238,63 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                     'Items',
                     style: TextStyle(
                       color: AppColors.textDark,
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const Spacer(),
                   Text(
                     '${_items.length} item${_items.length == 1 ? '' : 's'}',
-                    style: const TextStyle(color: AppColors.textGray, fontSize: 13),
+                    style: const TextStyle(color: AppColors.textGray, fontSize: 12),
                   ),
                 ],
               ),
             ),
-            const Divider(indent: 20, endIndent: 20),
-            ..._items.map((item) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-              child: Row(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Text(
-                      item.name,
-                      style: const TextStyle(color: AppColors.textDark, fontSize: 14),
+                  ..._items.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            style: const TextStyle(color: AppColors.textDark, fontSize: 13),
+                          ),
+                        ),
+                        Text(
+                          'x${item.quantity}',
+                          style: const TextStyle(color: AppColors.textGray, fontSize: 12),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          '฿${item.lineTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(color: AppColors.textDark, fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
-                  ),
-                  Text(
-                    'x${item.quantity}',
-                    style: const TextStyle(color: AppColors.textGray, fontSize: 13),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    '฿${item.lineTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(color: AppColors.textDark, fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
+                  )),
+                  _buildDashedDivider(),
                 ],
               ),
-            )),
-            const Divider(indent: 20, endIndent: 20),
+            ),
           ],
           // Totals section
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Subtotal', style: TextStyle(color: AppColors.textGray, fontSize: 14)),
-                    Text('฿${_subtotal.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Service ${bill.serviceChargePercent ?? 0}%', style: const TextStyle(color: AppColors.textGray, fontSize: 14)),
-                    Text('฿${_service.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('VAT ${bill.vatPercent ?? 0}%', style: const TextStyle(color: AppColors.textGray, fontSize: 14)),
-                    Text('฿${_vat.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
-                  ],
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Total', style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text(
-                      '฿${_total.toStringAsFixed(2)}',
-                      style: const TextStyle(color: AppColors.primaryBlue, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
+                _buildTotalRow('Subtotal', _subtotal, isBold: false),
+                const SizedBox(height: 6),
+                _buildTotalRow('Service ${bill.serviceChargePercent ?? 0}%', _service, isBold: false),
+                const SizedBox(height: 6),
+                _buildTotalRow('VAT ${bill.vatPercent ?? 0}%', _vat, isBold: false),
+                const SizedBox(height: 12),
+                _buildDashedDivider(),
+                const SizedBox(height: 12),
+                _buildTotalRow('Total', _total, isBold: true, isTotal: true),
               ],
             ),
           ),
@@ -345,10 +303,54 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     );
   }
 
+  Widget _buildDashedDivider() {
+    return Row(
+      children: List.generate(
+        30,
+        (index) => Expanded(
+          child: Container(
+            height: 1,
+            margin: const EdgeInsets.only(right: 4),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: AppColors.textGray.withValues(alpha: 0.4),
+                  width: 1,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTotalRow(String label, double amount, {bool isBold = false, bool isTotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: isTotal ? AppColors.textDark : AppColors.textGray,
+            fontSize: isTotal ? 15 : 13,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          '฿${amount.toStringAsFixed(2)}',
+          style: TextStyle(
+            color: isTotal ? AppColors.primaryBlue : AppColors.textDark,
+            fontSize: isTotal ? 17 : 13,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPersonSplit() {
-    final members = [
-      {'id': '1', 'name': 'You', 'avatar': 'Y'},
-    ];
+    final currentUserId = ref.read(authProvider).value?.id;
 
     return Container(
       decoration: BoxDecoration(
@@ -371,33 +373,57 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
             style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          ...members.map((m) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.dimBlue,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.inputBorder),
-                  ),
-                  child: Center(
-                    child: Text(m['avatar']!, style: const TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
+          if (_perPerson.isEmpty)
+            const Text('No assignments yet', style: TextStyle(color: AppColors.textGray, fontSize: 14))
+          else
+            ..._perPerson.map((p) {
+              final user = p['user'] as Map<String, dynamic>? ?? {};
+              final displayName = (user['display_name'] ?? user['email'] ?? 'Unknown') as String;
+              final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+              final owed = (p['owed'] as num?)?.toDouble() ?? 0.0;
+              final isMe = p['user_id'] == currentUserId;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: isMe ? AppColors.primaryBlue : AppColors.dimBlue,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: isMe ? AppColors.primaryBlue : AppColors.inputBorder),
+                      ),
+                      child: Center(
+                        child: Text(
+                          initial,
+                          style: TextStyle(
+                            color: isMe ? Colors.white : AppColors.primaryBlue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        isMe ? '$displayName (You)' : displayName,
+                        style: TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 14,
+                          fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '฿${owed.toStringAsFixed(2)}',
+                      style: const TextStyle(color: AppColors.primaryBlue, fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(m['name']!, style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
-                ),
-                Text(
-                  '฿${_total.toStringAsFixed(2)}',
-                  style: const TextStyle(color: AppColors.primaryBlue, fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          )),
+              );
+            }),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -415,22 +441,45 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   }
 
 
+  double get _myOwedAmount {
+    final currentUserId = ref.read(authProvider).value?.id;
+    if (currentUserId == null || _perPerson.isEmpty) return _total;
+    final mine = _perPerson.where((p) => p['user_id'] == currentUserId).firstOrNull;
+    return (mine?['owed'] as num?)?.toDouble() ?? 0.0;
+  }
+
   Widget _buildPayButton() {
     final payerId = _bill?.paidBy;
+    final currentUserId = ref.read(authProvider).value?.id;
+    final isCurrentUserPayer = payerId != null && payerId == currentUserId;
+    final myOwed = _myOwedAmount;
+    final canPay = payerId != null && !isCurrentUserPayer && myOwed > 0;
+
+    String label;
+    if (payerId == null) {
+      label = 'No Payer Set';
+    } else if (isCurrentUserPayer) {
+      label = 'You paid this bill';
+    } else if (myOwed <= 0) {
+      label = 'Nothing to pay';
+    } else {
+      label = 'Pay ฿${myOwed.toStringAsFixed(2)}';
+    }
+
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: payerId == null ? AppColors.textGray : AppColors.primaryBlue,
+          backgroundColor: canPay ? AppColors.primaryBlue : AppColors.textGray,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        onPressed: payerId == null
-            ? null
-            : () => context.go('/bill/${widget.billId}/paid/$payerId/${_total.toInt()}?amount=${_total.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}'),
-        child: Text(payerId == null ? 'No Payer Set' : 'Pay', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        onPressed: canPay
+            ? () => context.go('/bill/${widget.billId}/paid/$payerId/${myOwed.toInt()}?amount=${myOwed.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}&rawAmount=${myOwed.toStringAsFixed(2)}')
+            : null,
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
     );
   }

@@ -41,7 +41,7 @@ class Bill {
     name: (json['name'] ?? json['Name'] ?? '').toString(),
     date: DateTime.tryParse((json['date'] ?? json['Date'] ?? '').toString()) ?? DateTime.now(),
     createdBy: (json['created_by'] ?? json['createdBy'] ?? json['CreatedBy'] ?? '').toString(),
-    paidBy: (json['paid_by'] ?? json['paidBy'])?.toString(),
+    paidBy: _parseString(json['paid_by'] ?? json['paidBy']),
     status: (json['status'] ?? json['Status'] ?? 'active').toString(),
     inviteCode: (json['invite_code'] ?? json['inviteCode'] ?? json['InviteCode'] ?? '').toString(),
     createdAt: DateTime.tryParse((json['created_at'] ?? json['createdAt'] ?? json['CreatedAt'] ?? '').toString()) ?? DateTime.now(),
@@ -50,6 +50,22 @@ class Bill {
     receiptImageUrl: (json['receipt_image_url'] ?? json['receiptImageUrl'] ?? json['ReceiptImageUrl'])?.toString(),
     memberCount: (json['member_count'] ?? json['memberCount'] ?? json['MemberCount'] ?? 0) as int,
     ownerPromptpay: (json['owner_promptpay'] ?? json['ownerPromptpay'] ?? json['OwnerPromptpay'])?.toString(),
+  );
+
+  Bill copyWith({String? paidBy}) => Bill(
+    id: id,
+    name: name,
+    date: date,
+    createdBy: createdBy,
+    paidBy: paidBy ?? this.paidBy,
+    status: status,
+    inviteCode: inviteCode,
+    createdAt: createdAt,
+    serviceChargePercent: serviceChargePercent,
+    vatPercent: vatPercent,
+    receiptImageUrl: receiptImageUrl,
+    memberCount: memberCount,
+    ownerPromptpay: ownerPromptpay,
   );
 }
 
@@ -116,6 +132,13 @@ double? _toDouble(dynamic value) {
   if (value is int) return value.toDouble();
   if (value is String) return double.tryParse(value);
   return null;
+}
+
+String? _parseString(dynamic value) {
+  if (value == null) return null;
+  final s = value.toString().trim();
+  if (s.isEmpty || s == 'null' || s == 'NULL' || s == 'Null') return null;
+  return s;
 }
 
 String _tempId() => 'temp_${DateTime.now().microsecondsSinceEpoch}';
