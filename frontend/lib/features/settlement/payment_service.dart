@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'dart:typed_data';
-import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
@@ -46,32 +44,15 @@ final paymentServiceProvider = Provider<PaymentService>((ref) {
   return PaymentService(ref.read(authDioProvider));
 });
 
-// Cloudinary upload helper (Signed)
+// Cloudinary upload helper (Unsigned preset — no signature needed)
 Future<String> uploadSlipToCloudinary(Uint8List imageBytes) async {
-  String apiKey;
-  String apiSecret;
-  try {
-    apiKey = cloudinaryApiKey;
-    apiSecret = cloudinaryApiSecret;
-  } catch (e) {
-    throw Exception('Cloudinary config error: $e');
-  }
-
-  final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-  final params = 'timestamp=$timestamp&upload_preset=billgang_slips';
-  final toSign = '$apiSecret$params';
-  final signature = sha1.convert(utf8.encode(toSign)).toString();
-
   final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 30)));
   final formData = FormData.fromMap({
     'file': MultipartFile.fromBytes(
       imageBytes,
       filename: 'slip_${DateTime.now().millisecondsSinceEpoch}.jpg',
     ),
-    'api_key': apiKey,
-    'timestamp': timestamp,
-    'upload_preset': 'billgang_slips',
-    'signature': signature,
+    'upload_preset': 'billgang_slips', // must be Unsigned in Cloudinary
   });
 
   try {
