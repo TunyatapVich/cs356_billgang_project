@@ -146,99 +146,35 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     );
   }
 
-  Widget _buildHero(Bill bill) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: const BoxDecoration(
-            color: Color(0xFFE4E6FF),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 36),
-        ),
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: bill.isActive
-                  ? const Color(0xFF34C759)
-                  : AppColors.textGray.withValues(alpha: 0.5),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: (bill.isActive ? const Color(0xFF34C759) : AppColors.textGray).withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.check, color: Colors.white, size: 14),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildMemberRow(Bill bill) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.inputBorder),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE4E6FF),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.group, color: AppColors.primaryBlue, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  bill.name,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${bill.memberCount} member${bill.memberCount == 1 ? '' : 's'}  ·  ${_formatDate(bill.date)}',
-                  style: const TextStyle(color: AppColors.textGray, fontSize: 13),
-                ),
-              ],
+          Text(
+            bill.name,
+            style: const TextStyle(
+              color: AppColors.textDark,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: bill.isActive
-                  ? const Color(0xFF34C759).withValues(alpha: 0.1)
-                  : AppColors.textGray.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              bill.isActive ? 'Active' : 'Settled',
-              style: TextStyle(
-                color: bill.isActive ? const Color(0xFF34C759) : AppColors.textGray,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            height: 1,
+            width: 60,
+            color: AppColors.textGray.withValues(alpha: 0.4),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _formatDate(bill.date),
+            style: const TextStyle(color: AppColors.textGray, fontSize: 13),
           ),
         ],
       ),
