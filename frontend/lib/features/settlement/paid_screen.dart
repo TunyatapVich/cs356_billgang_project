@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/theme/app_colors.dart';
+import '../auth/auth_provider.dart';
 import 'payment_service.dart';
 
 class PaidScreen extends ConsumerStatefulWidget {
@@ -49,8 +50,11 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   Future<void> _loadQrData() async {
     setState(() { _loading = true; _error = null; });
     try {
+      final currentUser = ref.read(authProvider).value;
+      if (currentUser == null) throw Exception('Not authenticated');
       final result = await ref.read(paymentServiceProvider).create(
         billId: widget.billId,
+        fromUserId: currentUser.id,
         toUserId: widget.toUserId,
         amount: widget.amount,
       );

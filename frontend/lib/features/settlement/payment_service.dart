@@ -13,11 +13,13 @@ class PaymentService {
 
   Future<Map<String, dynamic>> create({
     required String billId,
+    required String fromUserId,
     required String toUserId,
     required double amount,
   }) async {
     final response = await _dio.post('/payments', data: {
       'bill_id': billId,
+      'from_user_id': fromUserId,
       'to_user_id': toUserId,
       'amount': amount,
     });
