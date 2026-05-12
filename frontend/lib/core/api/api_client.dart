@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../storage/token_storage.dart';
 
@@ -20,19 +21,19 @@ String get cloudinaryCloudName {
 }
 
 String get cloudinaryApiKey {
-  const apiKey = String.fromEnvironment('CLOUDINARY_API_KEY', defaultValue: '');
-  if (apiKey.isEmpty) {
-    throw Exception('CLOUDINARY_API_KEY not configured. Run with --dart-define=CLOUDINARY_API_KEY=your_api_key');
+  final key = dotenv.env['CLOUDINARY_API_KEY'] ?? '';
+  if (key.isEmpty) {
+    throw Exception('CLOUDINARY_API_KEY not set in .env');
   }
-  return apiKey;
+  return key;
 }
 
 String get cloudinaryApiSecret {
-  const apiSecret = String.fromEnvironment('CLOUDINARY_API_SECRET', defaultValue: '');
-  if (apiSecret.isEmpty) {
-    throw Exception('CLOUDINARY_API_SECRET not configured. Run with --dart-define=CLOUDINARY_API_SECRET=your_api_secret');
+  final secret = dotenv.env['CLOUDINARY_API_SECRET'] ?? '';
+  if (secret.isEmpty) {
+    throw Exception('CLOUDINARY_API_SECRET not set in .env');
   }
-  return apiSecret;
+  return secret;
 }
 
 String get cloudinaryUploadUrl =>
