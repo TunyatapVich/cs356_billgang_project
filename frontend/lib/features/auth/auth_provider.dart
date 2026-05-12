@@ -35,8 +35,11 @@ class AuthNotifier extends AsyncNotifier<User?> {
     final token = await TokenStorage.read();
     if (token == null) return null;
 
-    // Token exists → restore user session from API
-    // If API fails (401/invalid token), clear token and return null
+    if (await TokenStorage.isTokenExpired()) {
+      await TokenStorage.delete();
+      return null;
+    }
+
     try {
       final result = await ref.read(authServiceProvider).getProfile();
       return User.fromJson(result['user'] as Map<String, dynamic>);
@@ -52,6 +55,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = await AsyncValue.guard(() async {
       final data = await ref.read(authServiceProvider).login(email, password);
       await TokenStorage.save(data['token']);
+      await TokenStorage.saveLastLogin();
       return User.fromJson(data['user'] as Map<String, dynamic>);
     });
   }
@@ -69,6 +73,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
           .read(authServiceProvider)
           .register(email, phone, password, passwordConfirm);
       await TokenStorage.save(data['token']);
+      await TokenStorage.saveLastLogin();
       return User.fromJson(data['user'] as Map<String, dynamic>);
     });
   }
