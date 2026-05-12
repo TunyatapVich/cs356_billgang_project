@@ -147,10 +147,10 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                   onTap: () async {
                     try {
                       await ref.read(assignProvider.notifier).setPayer(widget.billId, m.id);
-                    } catch (_) {
+                    } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Failed to update payer. Please try again.')),
+                          SnackBar(content: Text('Failed to update payer: $e')),
                         );
                       }
                     }
