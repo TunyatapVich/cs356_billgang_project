@@ -231,51 +231,129 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
 
   Widget _buildMemberBar(AssignState assignState) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
         color: AppColors.cardWhite,
         border: Border(bottom: BorderSide(color: AppColors.inputBorder)),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          children: List.generate(assignState.members.length, (i) {
-            final m = assignState.members[i];
-            final sel = i == assignState.selectedMemberIndex;
-            final isPayer = m.id == assignState.payerId;
-            return LongPressDraggable<Map<String, dynamic>>(
-              data: {'id': m.id, 'name': m.name, 'avatar': m.avatar},
-              feedback: Material(
-                color: Colors.transparent,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.dimBlue,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primaryBlue, width: 2.5),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4)),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(m.avatar, style: const TextStyle(color: AppColors.primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Text(
+                  assignState.members.isEmpty
+                      ? 'No members yet — invite first'
+                      : 'Assign items to:',
+                  style: const TextStyle(
+                    color: AppColors.textGray,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+                if (assignState.members.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      assignState.members[assignState.selectedMemberIndex].name,
+                      style: const TextStyle(
+                        color: AppColors.primaryBlue,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (assignState.members.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: OutlinedButton.icon(
+                onPressed: () => context.go('/bill/${widget.billId}/invite'),
+                icon: const Icon(Icons.person_add, size: 16),
+                label: const Text('Invite members'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryBlue,
+                  side: const BorderSide(color: AppColors.primaryBlue),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
               ),
-              childWhenDragging: Opacity(
-                opacity: 0.4,
-                child: _memberAvatar(m, sel, isPayer),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: List.generate(assignState.members.length, (i) {
+                  final m = assignState.members[i];
+                  final sel = i == assignState.selectedMemberIndex;
+                  final isPayer = m.id == assignState.payerId;
+                  return GestureDetector(
+                    onTap: () => ref.read(assignProvider.notifier).selectMember(i),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: sel ? AppColors.primaryBlue : Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: sel ? AppColors.primaryBlue : AppColors.inputBorder,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: sel ? Colors.white : AppColors.dimBlue,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                m.avatar,
+                                style: TextStyle(
+                                  color: sel ? AppColors.primaryBlue : AppColors.textGray,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            m.name,
+                            style: TextStyle(
+                              color: sel ? Colors.white : AppColors.textDark,
+                              fontSize: 13,
+                              fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                          if (isPayer) ...[
+                            const SizedBox(width: 4),
+                            const Icon(Icons.star, color: Colors.amber, size: 14),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                }),
               ),
-              onDragStarted: () => ref.read(assignProvider.notifier).selectMember(i),
-              child: GestureDetector(
-                onTap: () => ref.read(assignProvider.notifier).selectMember(i),
-                child: _memberAvatar(m, sel, isPayer),
-              ),
-            );
-          }),
-        ),
+            ),
+        ],
       ),
     );
   }
