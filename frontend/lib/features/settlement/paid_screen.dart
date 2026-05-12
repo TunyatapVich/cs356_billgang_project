@@ -13,6 +13,7 @@ class PaidScreen extends ConsumerStatefulWidget {
     required this.toUserName,
     required this.amount,
     this.qrData,
+    this.rawAmount,
   });
 
   final String billId;
@@ -20,6 +21,7 @@ class PaidScreen extends ConsumerStatefulWidget {
   final String toUserName;
   final double amount;
   final String? qrData;
+  final String? rawAmount;
 
   @override
   ConsumerState<PaidScreen> createState() => _PaidScreenState();
@@ -74,7 +76,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
-          onPressed: () => context.go('/bill/${widget.billId}/settlement'),
+          onPressed: () => context.go('/bill/${widget.billId}/summary'),
         ),
         title: const Text(
           'Pay',
@@ -159,7 +161,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            '฿${widget.amount.toStringAsFixed(2)}',
+            '฿${(widget.rawAmount ?? widget.amount.toStringAsFixed(2))}',
             style: const TextStyle(
               color: AppColors.textDark,
               fontSize: 32,

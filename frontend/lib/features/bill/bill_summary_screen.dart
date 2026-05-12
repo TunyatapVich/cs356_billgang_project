@@ -464,7 +464,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         onPressed: canPay
-            ? () => context.go('/bill/${widget.billId}/paid/$payerId/${myOwed.toInt()}?amount=${myOwed.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}')
+            ? () => context.go('/bill/${widget.billId}/paid/$payerId/${myOwed.toInt()}?amount=${myOwed.toStringAsFixed(2)}&name=${Uri.encodeComponent(_payerName)}&rawAmount=${myOwed.toStringAsFixed(2)}')
             : null,
         child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
