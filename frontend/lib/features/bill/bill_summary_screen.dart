@@ -225,114 +225,138 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   }
 
   Widget _buildBillCard(Bill bill) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Items section
-          if (_items.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Row(
-                children: [
-                  const Text(
-                    'Items',
-                    style: TextStyle(
-                      color: AppColors.textDark,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+    return ClipPath(
+      clipper: _BillCardClipper(),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.cardWhite,
+        ),
+        child: Column(
+          children: [
+            // Items section
+            if (_items.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Items',
+                      style: TextStyle(
+                        color: AppColors.textDark,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${_items.length} item${_items.length == 1 ? '' : 's'}',
-                    style: const TextStyle(color: AppColors.textGray, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(indent: 20, endIndent: 20),
-            ..._items.map((item) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.name,
-                      style: const TextStyle(color: AppColors.textDark, fontSize: 14),
-                    ),
-                  ),
-                  Text(
-                    'x${item.quantity}',
-                    style: const TextStyle(color: AppColors.textGray, fontSize: 13),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    '฿${item.lineTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(color: AppColors.textDark, fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            )),
-            const Divider(indent: 20, endIndent: 20),
-          ],
-          // Totals section
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Subtotal', style: TextStyle(color: AppColors.textGray, fontSize: 14)),
-                    Text('฿${_subtotal.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Service ${bill.serviceChargePercent ?? 0}%', style: const TextStyle(color: AppColors.textGray, fontSize: 14)),
-                    Text('฿${_service.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('VAT ${bill.vatPercent ?? 0}%', style: const TextStyle(color: AppColors.textGray, fontSize: 14)),
-                    Text('฿${_vat.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.textDark, fontSize: 14)),
-                  ],
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Total', style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.bold)),
+                    const Spacer(),
                     Text(
-                      '฿${_total.toStringAsFixed(2)}',
-                      style: const TextStyle(color: AppColors.primaryBlue, fontSize: 18, fontWeight: FontWeight.bold),
+                      '${_items.length} item${_items.length == 1 ? '' : 's'}',
+                      style: const TextStyle(color: AppColors.textGray, fontSize: 12),
                     ),
                   ],
                 ),
-              ],
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: Column(
+                  children: [
+                    ..._items.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              style: const TextStyle(color: AppColors.textDark, fontSize: 13),
+                            ),
+                          ),
+                          Text(
+                            'x${item.quantity}',
+                            style: const TextStyle(color: AppColors.textGray, fontSize: 12),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '฿${item.lineTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(color: AppColors.textDark, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    )),
+                    _buildDashedDivider(),
+                  ],
+                ),
+              ),
+            ],
+            // Totals section
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  _buildDashedDivider(),
+                  const SizedBox(height: 12),
+                  _buildTotalRow('Subtotal', _subtotal, isBold: false),
+                  const SizedBox(height: 6),
+                  _buildTotalRow('Service ${bill.serviceChargePercent ?? 0}%', _service, isBold: false),
+                  const SizedBox(height: 6),
+                  _buildTotalRow('VAT ${bill.vatPercent ?? 0}%', _vat, isBold: false),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 1,
+                    color: AppColors.textDark,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTotalRow('Total', _total, isBold: true, isTotal: true),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDashedDivider() {
+    return Row(
+      children: List.generate(
+        30,
+        (index) => Expanded(
+          child: Container(
+            height: 1,
+            margin: const EdgeInsets.only(right: 4),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: AppColors.textGray.withValues(alpha: 0.4),
+                  width: 1,
+                ),
+              ),
             ),
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildTotalRow(String label, double amount, {bool isBold = false, bool isTotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: isTotal ? AppColors.textDark : AppColors.textGray,
+            fontSize: isTotal ? 15 : 13,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          '฿${amount.toStringAsFixed(2)}',
+          style: TextStyle(
+            color: isTotal ? AppColors.primaryBlue : AppColors.textDark,
+            fontSize: isTotal ? 17 : 13,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -496,6 +520,48 @@ class _JaggedTopClipper extends CustomClipper<Path> {
     }
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _BillCardClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    final notchCount = 14;
+    final notchWidth = size.width / notchCount;
+    final notchDepth = 5.0;
+
+    // Top edge (jagged)
+    path.moveTo(0, notchDepth);
+    for (int i = 0; i < notchCount; i++) {
+      final x1 = notchWidth * i + notchWidth / 2;
+      final y1 = 0.0;
+      final x2 = notchWidth * (i + 1);
+      final y2 = notchDepth;
+      path.lineTo(x1, y1);
+      path.lineTo(x2, y2);
+    }
+
+    // Right edge
+    path.lineTo(size.width, size.height - notchDepth);
+
+    // Bottom edge (jagged inverted)
+    for (int i = notchCount - 1; i >= 0; i--) {
+      final x1 = notchWidth * i + notchWidth / 2;
+      final y1 = size.height;
+      final x2 = notchWidth * (i + 1);
+      final y2 = size.height - notchDepth;
+      path.lineTo(x2, y2);
+      path.lineTo(x1, y1);
+    }
+
+    // Left edge
+    path.lineTo(0, notchDepth);
     path.close();
     return path;
   }
