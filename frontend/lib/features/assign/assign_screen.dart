@@ -98,75 +98,134 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
     );
   }
 
+  void _showPayerPicker(AssignState assignState) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardWhite,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Who paid the bill?',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...assignState.members.map((m) {
+                final isSelected = m.id == assignState.payerId;
+                return ListTile(
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primaryBlue : AppColors.dimBlue,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        m.avatar,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : AppColors.primaryBlue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    m.name,
+                    style: TextStyle(
+                      color: isSelected ? AppColors.primaryBlue : AppColors.textDark,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check, color: AppColors.primaryBlue)
+                      : null,
+                  onTap: () {
+                    ref.read(assignProvider.notifier).setPayer(widget.billId, m.id);
+                    Navigator.pop(ctx);
+                  },
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPayerSection(AssignState assignState) {
     final payer = assignState.payerId != null
         ? assignState.members.where((m) => m.id == assignState.payerId).firstOrNull
         : null;
 
-    return DragTarget<Map<String, dynamic>>(
-      onWillAcceptWithDetails: (_) => true,
-      onAcceptWithDetails: (details) {
-        final memberId = details.data['id'] as String;
-        ref.read(assignProvider.notifier).setPayer(widget.billId, memberId);
-      },
-      builder: (context, candidateData, rejectedData) {
-        final isHovering = candidateData.isNotEmpty;
-        return Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: isHovering ? const Color(0xFFFFF3CD) : AppColors.cardWhite,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isHovering ? Colors.amber : AppColors.inputBorder,
-              width: isHovering ? 2 : 1,
+    return GestureDetector(
+      onTap: () => _showPayerPicker(assignState),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.inputBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3CD),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+              ),
+              child: const Icon(Icons.receipt, color: Colors.amber, size: 20),
             ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3CD),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
-                ),
-                child: const Icon(Icons.receipt, color: Colors.amber, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isHovering ? 'Drop to set payer' : 'Paid by',
-                      style: TextStyle(
-                        color: isHovering ? Colors.amber.shade700 : AppColors.textGray,
-                        fontSize: 11,
-                      ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Paid by',
+                    style: TextStyle(
+                      color: AppColors.textGray,
+                      fontSize: 11,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      payer?.name ?? 'Drag member here',
-                      style: TextStyle(
-                        color: payer != null ? AppColors.textDark : AppColors.primaryBlue,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    payer?.name ?? 'Tap to select',
+                    style: TextStyle(
+                      color: payer != null ? AppColors.textDark : AppColors.primaryBlue,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Icon(
-                Icons.drag_indicator,
-                color: isHovering ? Colors.amber : AppColors.textGray,
-                size: 20,
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: AppColors.textGray,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
