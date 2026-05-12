@@ -154,7 +154,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                         );
                       }
                     }
-                    if (mounted) Navigator.pop(ctx);
+                    if (ctx.mounted) Navigator.pop(ctx);
                   },
                 );
               }),

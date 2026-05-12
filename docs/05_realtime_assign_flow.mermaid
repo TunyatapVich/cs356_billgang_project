@@ -17,26 +17,29 @@ sequenceDiagram
     Note over UA,UB: ── User A adds a new item ──
 
     UA->>UA: optimistic update (show item immediately)
-    UA->>WS: send {type:"add_item", payload:{name:"ผัดไทย", unit_price:150}}
-    WS->>DB: INSERT bill_items
-    DB-->>WS: item {id, name, unit_price}
-    WS-->>UA: {type:"item_added", item} ← confirm
-    WS-->>UB: {type:"item_added", item} ← broadcast
+    UA->>API: POST /bills/:id/items {name:"ผัดไทย", unit_price:150}
+    API->>DB: INSERT bill_items
+    DB-->>API: item {id, name, unit_price}
+    API-->>UA: confirmed
+    API->>WS: Broadcast {type:"item_added", item}
+    WS-->>UB: {type:"item_added", item}
     UB->>UB: item appears in list live
 
     Note over UA,UB: ── Both assign themselves simultaneously ──
 
-    UA->>WS: send {type:"assign_item", payload:{item_id, user_id:A}}
-    UB->>WS: send {type:"assign_item", payload:{item_id, user_id:B}}
+    UA->>API: POST /bills/:id/items/:itemId/assign {user_id:A}
+    UB->>API: POST /bills/:id/items/:itemId/assign {user_id:B}
 
-    WS->>DB: INSERT item_assigns {item_id, user_id:A}
-    WS->>DB: INSERT item_assigns {item_id, user_id:B}
-    DB-->>WS: both saved (shared item — no conflict)
+    API->>DB: INSERT item_assigns {item_id, user_id:A}
+    API->>DB: INSERT item_assigns {item_id, user_id:B}
 
-    WS-->>UA: {type:"item_assigned", assign:{item_id, user_id:A}}
-    WS-->>UB: {type:"item_assigned", assign:{item_id, user_id:A}}
-    WS-->>UA: {type:"item_assigned", assign:{item_id, user_id:B}}
-    WS-->>UB: {type:"item_assigned", assign:{item_id, user_id:B}}
+    API->>WS: Broadcast {type:"item_assigned", assign:A}
+    API->>WS: Broadcast {type:"item_assigned", assign:B}
+
+    WS-->>UA: {type:"item_assigned", assign:A}
+    WS-->>UB: {type:"item_assigned", assign:A}
+    WS-->>UA: {type:"item_assigned", assign:B}
+    WS-->>UB: {type:"item_assigned", assign:B}
 
     Note over UA,UB: Both see both avatars on the item live
 

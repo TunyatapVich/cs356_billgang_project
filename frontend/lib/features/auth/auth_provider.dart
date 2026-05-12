@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/storage/token_storage.dart';
+import '../bill/bill_provider.dart';
 import 'auth_service.dart';
 
 class User {
@@ -45,6 +46,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = await AsyncValue.guard(() async {
       final data = await ref.read(authServiceProvider).login(email, password);
       await TokenStorage.save(data['token']);
+      ref.invalidate(billListProvider); // Clear old cached bills
       return User.fromJson(data['user'] as Map<String, dynamic>);
     });
   }
@@ -61,12 +63,14 @@ class AuthNotifier extends AsyncNotifier<User?> {
           .read(authServiceProvider)
           .register(email, phone, password, passwordConfirm);
       await TokenStorage.save(data['token']);
+      ref.invalidate(billListProvider); // Clear cached bills for the new user
       return User.fromJson(data['user'] as Map<String, dynamic>);
     });
   }
 
   Future<void> logout() async {
     await TokenStorage.delete();
+    ref.invalidate(billListProvider); // Clear cached bills immediately
     state = const AsyncData(null);
   }
 

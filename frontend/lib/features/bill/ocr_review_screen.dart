@@ -107,7 +107,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
       await ref
           .read(billItemsProvider(widget.billId).notifier)
           .addItemsBulk(validItems);
-      if (mounted) context.go('/bill/${widget.billId}/invite');
+      if (mounted) context.go('/bill/${widget.billId}/items');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
