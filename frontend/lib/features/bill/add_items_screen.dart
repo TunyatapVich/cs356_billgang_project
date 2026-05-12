@@ -311,20 +311,15 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
     return Row(
       children: [
         Expanded(
-          flex: 2,
-          child: _inputField(
-            controller: _qtyController,
-            hint: 'Qty',
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          ),
+          flex: 3,
+          child: _qtyStepper(),
         ),
         const SizedBox(width: 10),
         Expanded(
-          flex: 3,
+          flex: 4,
           child: _inputField(
             controller: _priceController,
-            hint: 'Unit price',
+            hint: 'Price',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
@@ -332,6 +327,69 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _qtyStepper() {
+    final qty = int.tryParse(_qtyController.text) ?? 1;
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: inputFill,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: inputBorder),
+      ),
+      child: Row(
+        children: [
+          _stepperBtn(
+            icon: Icons.remove,
+            onTap: () {
+              if (qty > 1) {
+                _qtyController.text = (qty - 1).toString();
+              }
+            },
+          ),
+          Expanded(
+            child: TextField(
+              controller: _qtyController,
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: const TextStyle(
+                color: textDark,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: 4),
+              ),
+            ),
+          ),
+          _stepperBtn(
+            icon: Icons.add,
+            onTap: () {
+              _qtyController.text = (qty + 1).toString();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepperBtn({required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE4E6FF),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: primaryBlue, size: 18),
+      ),
     );
   }
 
