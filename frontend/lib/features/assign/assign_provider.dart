@@ -128,11 +128,20 @@ class AssignNotifier extends Notifier<AssignState> {
       final billData = data['bill'] as Map<String, dynamic>?;
       final payerId = (billData?['paid_by'] ?? billData?['created_by'])?.toString();
 
+      // Pre-select the current user if they are in the members list,
+      // otherwise default to index 0.
+      final currentUser = ref.read(authProvider).value;
+      int selectedIdx = 0;
+      if (currentUser != null) {
+        final idx = members.indexWhere((m) => m.id == currentUser.id);
+        if (idx >= 0) selectedIdx = idx;
+      }
+
       state = state.copyWith(
         items: items,
         members: members,
         payerId: payerId,
-        selectedMemberIndex: 0,
+        selectedMemberIndex: selectedIdx,
         loading: false,
       );
 
