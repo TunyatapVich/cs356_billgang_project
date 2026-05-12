@@ -263,6 +263,7 @@ class AssignNotifier extends Notifier<AssignState> {
         break;
       case 'member_joined':
         if (_billId != null) loadBill(_billId!);
+        ref.read(billListProvider.notifier).refreshBills();
         break;
     }
   }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/api/api_client.dart';
+import '../bill/bill_provider.dart';
 
 class JoinScreen extends ConsumerStatefulWidget {
   const JoinScreen({super.key});
@@ -54,6 +55,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
 
       if (!mounted) return;
       if (_billId != null) {
+        ref.read(billListProvider.notifier).refreshBills();
         context.go('/bill/$_billId/items');
       } else {
         context.go('/');
