@@ -83,20 +83,30 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
           onPressed: () => context.go('/bill/${widget.billId}/summary'),
         ),
-        title: const Text(
-          'Pay',
-          style: TextStyle(
+        title: Text(
+          _loading ? 'Loading...' : '฿${(widget.rawAmount ?? widget.amount.toStringAsFixed(2))}',
+          style: const TextStyle(
             color: AppColors.textDark,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          if (!_loading && _promptpayNumber != null)
+            TextButton(
+              onPressed: () => context.go('/bill/${widget.billId}/settlement'),
+              child: const Text(
+                'Done',
+                style: TextStyle(color: AppColors.primaryBlue, fontSize: 16),
+              ),
+            ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? _buildError()
-              : _buildBody(),
+              : _buildContent(),
     );
   }
 
@@ -130,189 +140,98 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     );
   }
 
-  Widget _buildBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-      child: Column(
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 20),
-          _buildQrCard(),
-          if (_promptpayNumber != null) ...[
-            const SizedBox(height: 20),
-            _buildPhoneCard(),
-          ],
-          const SizedBox(height: 32),
-          _buildDoneButton(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'Pay',
-            style: TextStyle(color: AppColors.textGray, fontSize: 13),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '฿${(widget.rawAmount ?? widget.amount.toStringAsFixed(2))}',
-            style: const TextStyle(
-              color: AppColors.textDark,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'to ${_fetchedToUserName ?? widget.toUserName}',
-            style: const TextStyle(color: AppColors.primaryBlue, fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQrCard() {
+  Widget _buildContent() {
     if (_promptpayNumber == null) {
-      return Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: AppColors.cardWhite,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.inputBorder),
-        ),
-        child: const Center(
-          child: Text(
-            'No PromptPay number set',
-            style: TextStyle(color: AppColors.textGray),
-          ),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.qr_code, color: AppColors.textGray, size: 48),
+            const SizedBox(height: 16),
+            const Text(
+              'No PromptPay number set',
+              style: TextStyle(color: AppColors.textGray, fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => context.go('/bill/${widget.billId}/settlement'),
+              child: const Text('Go Back'),
+            ),
+          ],
         ),
       );
     }
 
-    // Use ThaiQRGenerator for valid PromptPay payload
     final generator = ThaiQRGenerator();
     final qrPayload = generator.generateCodeFromMobileOrId(
       _promptpayNumber!,
       (widget.rawAmount ?? widget.amount.toStringAsFixed(2)),
     );
 
-    return Container(
-      width: 350,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 1. Blue banner with Thai QR logo - full width
-          Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: AppColors.thaiQRBlue,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(8),
-                topRight: Radius.circular(8),
+    return Center(
+      child: Container(
+        width: 350,
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 1. Blue banner with Thai QR logo - full width
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: AppColors.thaiQRBlue,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
+                ),
+              ),
+              child: Image.asset(
+                'assets/header.png',
+                fit: BoxFit.cover,
               ),
             ),
-            child: Image.asset(
-              'assets/header.png',
-              fit: BoxFit.cover,
+            // 2. QR Code with PromptPay logo centered inside
+            Container(
+              width: 200,
+              height: 200,
+              margin: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: AppColors.inputBorder),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  QrImageView(
+                    data: qrPayload,
+                    version: QrVersions.auto,
+                    size: 200,
+                    backgroundColor: Colors.white,
+                  ),
+                  Image.asset(
+                    'assets/logo.png',
+                    height: 38,
+                  ),
+                ],
+              ),
             ),
-          ),
-          // 2. QR Code with PromptPay logo centered inside
-          Container(
-            width: 200,
-            height: 200,
-            margin: const EdgeInsets.symmetric(vertical: 20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: AppColors.inputBorder),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                QrImageView(
-                  data: qrPayload,
-                  version: QrVersions.auto,
-                  size: 200,
-                  backgroundColor: Colors.white,
-                ),
-                // PromptPay logo centered on top of QR
-                Image.asset(
-                  'assets/logo.png',
-                  height: 38,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPhoneCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.phone_android, color: AppColors.primaryBlue, size: 20),
-          const SizedBox(width: 10),
-          Text(
-            _promptpayNumber!,
-            style: const TextStyle(
-              color: AppColors.textDark,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDoneButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryBlue,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-        onPressed: () => context.go('/bill/${widget.billId}/settlement'),
-        child: const Text(
-          "I've Paid",
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ],
         ),
       ),
     );
