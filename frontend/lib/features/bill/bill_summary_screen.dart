@@ -672,6 +672,16 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     return (mine?['owed'] as num?)?.toDouble() ?? 0.0;
   }
 
+  bool get _hasCurrentUserPaid {
+    final currentUserId = ref.read(authProvider).value?.id;
+    if (currentUserId == null) return false;
+    return _payments.any(
+      (pmt) =>
+          pmt['from_user_id'] == currentUserId &&
+          pmt['status'] == 'confirmed',
+    );
+  }
+
   Widget _buildPayButton() {
     final bill = _bill!;
     final isSettled = !bill.isActive;
@@ -715,10 +725,13 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     final currentUserId = ref.read(authProvider).value?.id;
     final isCurrentUserPayer = payerId == currentUserId;
     final myOwed = _myOwedAmount;
-    final canPay = payerId.isNotEmpty && !isCurrentUserPayer && myOwed > 0;
+    final hasPaid = _hasCurrentUserPaid;
+    final canPay = payerId.isNotEmpty && !isCurrentUserPayer && myOwed > 0 && !hasPaid;
 
     String label;
-    if (payerId.isEmpty) {
+    if (hasPaid) {
+      label = 'ชำระแล้ว';
+    } else if (payerId.isEmpty) {
       label = 'No Payer Set';
     } else if (isCurrentUserPayer) {
       label = 'You paid this bill';
