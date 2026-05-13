@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Elysia } from "elysia";
 import { openapi } from "@elysiajs/openapi";
 import { AuthModule } from "./modules/auth";

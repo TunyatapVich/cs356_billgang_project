@@ -375,9 +375,35 @@ class OcrNotifier extends Notifier<OcrState> {
   Future<void> scan(String billId, Uint8List imageBytes) async {
     state = const OcrState(status: OcrScanStatus.scanning);
     try {
+      final recognised = await recognizer.processImage(
+        InputImage.fromFile(imageFile),
+      );
+      final rawText = recognised.text;
+
+      if (rawText.trim().isEmpty) {
+        state = const OcrState(
+          status: OcrScanStatus.error,
+          error: 'No text detected. Try a clearer image.',
+        );
+        return;
+      }
+
+      final imageBytes = await imageFile.readAsBytes();
+      final ext = imageFile.path.toLowerCase();
+      final mimeType = ext.endsWith('.png')
+          ? 'image/png'
+          : ext.endsWith('.webp')
+          ? 'image/webp'
+          : 'image/jpeg';
       final parsed = await ref
           .read(billServiceProvider)
-          .runOcr(billId: billId, imageBytes: imageBytes);
+          .runOcr(
+            billId: billId,
+            rawText: rawText,
+            imageBytes: imageBytes,
+            imageMimeType: mimeType,
+          );
+
       state = OcrState(status: OcrScanStatus.done, items: parsed);
     } catch (e) {
       state = OcrState(status: OcrScanStatus.error, error: 'Scan failed: $e');

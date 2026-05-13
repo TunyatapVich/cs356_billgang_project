@@ -44,7 +44,9 @@ export const BillItemUpdatePayload = t.Object({
 export type BillItemUpdateRequest = Static<typeof BillItemUpdatePayload>;
 
 export const BillOcrPayload = t.Object({
-  image: t.File(),
+  raw_text: t.String(),
+  image_url: t.Optional(t.String()),
+  image: t.Optional(t.File()),
 });
 export type BillOcrRequest = Static<typeof BillOcrPayload>;
 

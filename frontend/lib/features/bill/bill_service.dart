@@ -124,17 +124,36 @@ class BillService {
 
   Future<List<Map<String, dynamic>>> runOcr({
     required String billId,
-    required Uint8List imageBytes,
-    String mimeType = 'image/jpeg',
+    required String rawText,
+    String? imageUrl,
+    List<int>? imageBytes,
+    String? imageMimeType,
   }) async {
-    final formData = FormData.fromMap({
-      'image': MultipartFile.fromBytes(
+    final payload = <String, dynamic>{'raw_text': rawText};
+    if (imageUrl != null) payload['image_url'] = imageUrl;
+    if (imageBytes != null) {
+      final imageExt = imageMimeType == 'image/png'
+          ? 'png'
+          : imageMimeType == 'image/webp'
+              ? 'webp'
+              : 'jpg';
+      final contentType = imageMimeType == 'image/png'
+          ? DioMediaType('image', 'png')
+          : imageMimeType == 'image/webp'
+              ? DioMediaType('image', 'webp')
+              : DioMediaType('image', 'jpeg');
+      payload['image'] = MultipartFile.fromBytes(
         imageBytes,
-        filename: 'receipt_${DateTime.now().millisecondsSinceEpoch}.jpg',
-        contentType: DioMediaType.parse(mimeType),
-      ),
-    });
-    final response = await _dio.post('/bills/$billId/ocr', data: formData);
+        filename: 'receipt.$imageExt',
+        contentType: contentType,
+      );
+    }
+    final formData = FormData.fromMap(payload);
+
+    final response = await _dio.post(
+      '/bills/$billId/ocr',
+      data: formData,
+    );
     final data = response.data as Map<String, dynamic>;
     return (data['items'] as List<dynamic>).cast<Map<String, dynamic>>();
   }
