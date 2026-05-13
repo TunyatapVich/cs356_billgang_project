@@ -579,6 +579,14 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                             ),
                           ),
                           if (hasPaid) ...[
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.check_circle,
+                              color: AppColors.successGreen,
+                              size: 14,
+                            ),
+                          ],
+                          if (hasPaid) ...[
                             const SizedBox(height: 4),
                             Row(
                               children: [
@@ -616,26 +624,13 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                         ],
                       ),
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '฿${owed.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            color: AppColors.primaryBlue,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (hasPaid) ...[
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.check_circle,
-                            color: AppColors.successGreen,
-                            size: 16,
-                          ),
-                        ],
-                      ],
+                    Text(
+                      '฿${owed.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: AppColors.primaryBlue,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
