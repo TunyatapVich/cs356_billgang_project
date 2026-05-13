@@ -77,12 +77,19 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
   }
 
   Future<void> _pickAndScan(ImageSource source) async {
-    final picked = await _picker.pickImage(source: source, imageQuality: 85);
-    if (picked == null) return;
-    final imageFile = File(picked.path);
-    if (!mounted) return;
-    setState(() => _pickedImage = imageFile);
-    await ref.read(ocrProvider.notifier).scan(widget.billId, imageFile);
+    try {
+      final picked = await _picker.pickImage(source: source, imageQuality: 85);
+      if (picked == null) return;
+      final imageFile = File(picked.path);
+      if (!mounted) return;
+      setState(() => _pickedImage = imageFile);
+      await ref.read(ocrProvider.notifier).scan(widget.billId, imageFile);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open image: $e')),
+      );
+    }
   }
 
   void _removeItem(int index) {
@@ -125,12 +132,13 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
     // Sync editable rows once scan completes.
     ref.listen<OcrState>(ocrProvider, (prev, next) {
       if (next.status == OcrScanStatus.done &&
-          prev?.status == OcrScanStatus.scanning) {
+          prev?.status != OcrScanStatus.done) {
         setState(() => _syncEditableItems(next.items));
       }
     });
 
     final isScanning = ocrState.status == OcrScanStatus.scanning;
+    final isDone = ocrState.status == OcrScanStatus.done;
     final hasItems = _editableItems.isNotEmpty;
 
     return Scaffold(
@@ -163,19 +171,19 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                   _buildPickerCard(isScanning),
                   if (ocrState.error != null) ...[
                     const SizedBox(height: 12),
-                    Text(
-                      ocrState.error!,
-                      style: const TextStyle(
-                          color: AppColors.errorRed, fontSize: 13),
-                    ),
+                    _buildErrorBanner(ocrState.error!),
+                  ],
+                  if (isDone && !hasItems && ocrState.error == null) ...[
+                    const SizedBox(height: 20),
+                    _buildNoItemsFound(),
                   ],
                   if (hasItems) ...[
                     const SizedBox(height: 24),
                     _buildReviewHeader(),
                     const SizedBox(height: 12),
                     ..._buildItemRows(),
-                    _buildAddManualRow(),
                   ],
+                  if (isDone) _buildAddManualRow(),
                 ],
               ),
             ),
@@ -435,6 +443,62 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
           hintStyle:
               const TextStyle(color: AppColors.textGray, fontSize: 12),
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.errorRed.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: AppColors.errorRed, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(color: AppColors.errorRed, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoItemsFound() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.inputBorder),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.receipt_long_outlined, color: AppColors.textGray, size: 36),
+          SizedBox(height: 10),
+          Text(
+            'No items detected',
+            style: TextStyle(
+              color: AppColors.textDark,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Try a clearer photo, or add items manually below.',
+            style: TextStyle(color: AppColors.textGray, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
