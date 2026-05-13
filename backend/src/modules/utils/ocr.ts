@@ -25,44 +25,41 @@ export const parseReceiptImage = async (
   imageBuffer: ArrayBuffer,
   mimeType: string,
 ): Promise<ParsedItem[]> => {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY not set");
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY not set");
 
-  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+  const model = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
   const base64 = Buffer.from(imageBuffer).toString("base64");
-  const dataUrl = `data:${mimeType};base64,${base64}`;
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${apiKey}`,
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { inlineData: { mimeType, data: base64 } },
+              { text: PROMPT },
+            ],
+          },
+        ],
+        generationConfig: { responseMimeType: "application/json" },
+      }),
     },
-    body: JSON.stringify({
-      model,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image_url", image_url: { url: dataUrl } },
-            { type: "text", text: PROMPT },
-          ],
-        },
-      ],
-    }),
-  });
+  );
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI responded ${res.status}: ${err}`);
+    throw new Error(`Gemini responded ${res.status}: ${err}`);
   }
 
   const body = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
   };
-  const content = body.choices?.[0]?.message?.content;
-  if (!content) throw new Error("OpenAI empty response");
+  const content = body.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content) throw new Error("Gemini empty response");
 
   const parsed = JSON.parse(content) as { items?: ParsedItem[] };
   if (!Array.isArray(parsed.items)) throw new Error("LLM returned no items array");
