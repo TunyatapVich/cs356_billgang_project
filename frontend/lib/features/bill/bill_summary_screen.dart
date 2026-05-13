@@ -85,15 +85,15 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       final service = ref.read(billServiceProvider);
       final paymentService = ref.read(paymentServiceProvider);
       
-      final results = await Future.wait<Map<String, dynamic>>([
+      final results = await Future.wait<dynamic>([
         service.getBill(widget.billId),
         service.getDebts(widget.billId),
         paymentService.listByBill(widget.billId),
       ]);
 
-      final billData = results[0];
-      final debtsData = results[1];
-      final paymentsData = results[2];
+      final billData = results[0] as Map<String, dynamic>;
+      final debtsData = results[1] as Map<String, dynamic>;
+      final paymentsData = results[2] as Map<String, dynamic>;
 
       final bill = Bill.fromJson(billData['bill'] as Map<String, dynamic>);
       final rawItems = (billData['items'] as List<dynamic>?) ?? [];
@@ -109,10 +109,8 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           (debtsData['per_person'] as List<dynamic>?)
               ?.cast<Map<String, dynamic>>() ??
           [];
-      final payments = 
-          (paymentsData['payments'] as List<dynamic>?)
-              ?.cast<Map<String, dynamic>>() ??
-          [];
+      final payments = ((paymentsData['payments'] as List<dynamic>?) ?? [])
+          .cast<Map<String, dynamic>>();
 
       if (!mounted) return;
       setState(() {
@@ -506,124 +504,189 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
               final avatarUrl = user['avatar_url'] as String?;
               final owed = (p['owed'] as num?)?.toDouble() ?? 0.0;
               final isMe = p['user_id'] == currentUserId;
+              final assignedItemIds =
+                  (p['item_ids'] as List<dynamic>?)?.cast<String>() ?? [];
+              final payerId = _bill?.paidBy ?? _bill?.createdBy ?? '';
+              final isPayer = p['user_id'] == payerId;
 
               final payment = _payments
                   .where((pmt) => pmt['from_user_id'] == p['user_id'])
                   .firstOrNull;
               final hasPaid =
-                  payment != null && payment['status'] == 'confirmed';
+                  isPayer || (payment != null && payment['status'] == 'confirmed');
               final slipUrl = payment?['slip_url'] as String?;
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: isMe ? AppColors.primaryBlue : AppColors.dimBlue,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isMe
-                              ? AppColors.primaryBlue
-                              : AppColors.inputBorder,
-                        ),
-                      ),
-                      child: Center(
-                        child: avatarUrl != null && avatarUrl.isNotEmpty
-                            ? ClipOval(
-                                child: Image.network(
-                                  avatarUrl,
-                                  width: 36,
-                                  height: 36,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Text(
-                                        initial,
-                                        style: TextStyle(
-                                          color: isMe
-                                              ? Colors.white
-                                              : AppColors.primaryBlue,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                ),
-                              )
-                            : Text(
-                                initial,
-                                style: TextStyle(
-                                  color: isMe
-                                      ? Colors.white
-                                      : AppColors.primaryBlue,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isMe ? '$displayName (You)' : displayName,
-                            style: TextStyle(
-                              color: AppColors.textDark,
-                              fontSize: 14,
-                              fontWeight: isMe
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: isMe ? AppColors.primaryBlue : AppColors.dimBlue,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isMe
+                                  ? AppColors.primaryBlue
+                                  : AppColors.inputBorder,
                             ),
                           ),
-                          if (hasPaid) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
+                          child: Center(
+                            child: avatarUrl != null && avatarUrl.isNotEmpty
+                                ? ClipOval(
+                                    child: Image.network(
+                                      avatarUrl,
+                                      width: 36,
+                                      height: 36,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          Text(
+                                            initial,
+                                            style: TextStyle(
+                                              color: isMe
+                                                  ? Colors.white
+                                                  : AppColors.primaryBlue,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                    ),
+                                  )
+                                : Text(
+                                    initial,
+                                    style: TextStyle(
+                                      color: isMe
+                                          ? Colors.white
+                                          : AppColors.primaryBlue,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isMe ? '$displayName (You)' : displayName,
+                                style: TextStyle(
+                                  color: AppColors.textDark,
+                                  fontSize: 14,
+                                  fontWeight: isMe
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                              if (hasPaid) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.successGreen
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        'Paid',
+                                        style: TextStyle(
+                                          color: AppColors.successGreen,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    if (slipUrl != null) ...[
+                                      const SizedBox(width: 6),
+                                      GestureDetector(
+                                        onTap: () => _showReceiptDialog(slipUrl),
+                                        child: const Icon(
+                                          Icons.receipt_long,
+                                          size: 14,
+                                          color: AppColors.primaryBlue,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ] else if (owed > 0) ...[
+                                const SizedBox(height: 4),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: AppColors.successGreen
-                                        .withValues(alpha: 0.1),
+                                    color: AppColors.textGray.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: const Text(
-                                    'Paid',
+                                    'Pending',
                                     style: TextStyle(
-                                      color: AppColors.successGreen,
+                                      color: AppColors.textGray,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
-                                if (slipUrl != null) ...[
-                                  const SizedBox(width: 6),
-                                  GestureDetector(
-                                    onTap: () => _showReceiptDialog(slipUrl),
-                                    child: const Icon(
-                                      Icons.receipt_long,
-                                      size: 14,
-                                      color: AppColors.primaryBlue,
+                              ],
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '฿${owed.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: AppColors.primaryBlue,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (assignedItemIds.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      ..._items
+                          .where((item) => assignedItemIds.contains(item.id))
+                          .map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.only(left: 48, bottom: 4),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      item.name,
+                                      style: const TextStyle(
+                                        color: AppColors.textGray,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    'x${item.quantity}',
+                                    style: const TextStyle(
+                                      color: AppColors.textGray,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '฿${item.lineTotal.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      color: AppColors.textGray,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ],
-                              ],
+                              ),
                             ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '฿${owed.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: AppColors.primaryBlue,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                          ),
+                    ],
                   ],
                 ),
               );
@@ -662,6 +725,42 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
         .where((p) => p['user_id'] == currentUserId)
         .firstOrNull;
     return (mine?['owed'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  bool get _hasCurrentUserPaid {
+    final currentUserId = ref.read(authProvider).value?.id;
+    if (currentUserId == null) return false;
+    return _payments.any(
+      (pmt) =>
+          pmt['from_user_id'] == currentUserId &&
+          pmt['status'] == 'confirmed',
+    );
+  }
+
+  bool get _allMembersPaid {
+    if (_perPerson.isEmpty) return false;
+    return _perPerson.every((p) {
+      final userId = p['user_id'] as String?;
+      if (userId == null) return false;
+      return _payments.any(
+        (pmt) =>
+            pmt['from_user_id'] == userId && pmt['status'] == 'confirmed',
+      );
+    });
+  }
+
+  Future<void> _settleBill() async {
+    try {
+      final service = ref.read(billServiceProvider);
+      await service.settleBill(widget.billId);
+      await _loadBill();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to close bill: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildPayButton() {
@@ -707,10 +806,37 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     final currentUserId = ref.read(authProvider).value?.id;
     final isCurrentUserPayer = payerId == currentUserId;
     final myOwed = _myOwedAmount;
-    final canPay = payerId.isNotEmpty && !isCurrentUserPayer && myOwed > 0;
+    final hasPaid = _hasCurrentUserPaid;
+    final allPaid = _allMembersPaid;
+    final canPay = payerId.isNotEmpty && !isCurrentUserPayer && myOwed > 0 && !hasPaid;
+
+    // Payer sees "ปิดบิล" when everyone has paid
+    if (isCurrentUserPayer && allPaid && !isSettled) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.successGreen,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          onPressed: _settleBill,
+          child: const Text(
+            'ปิดบิล',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        ),
+      );
+    }
 
     String label;
-    if (payerId.isEmpty) {
+    if (hasPaid) {
+      label = 'Paid';
+    } else if (payerId.isEmpty) {
       label = 'No Payer Set';
     } else if (isCurrentUserPayer) {
       label = 'You paid this bill';
