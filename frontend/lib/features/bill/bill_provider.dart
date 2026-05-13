@@ -390,9 +390,21 @@ class OcrNotifier extends Notifier<OcrState> {
         return;
       }
 
+      final imageBytes = await imageFile.readAsBytes();
+      final ext = imageFile.path.toLowerCase();
+      final mimeType = ext.endsWith('.png')
+          ? 'image/png'
+          : ext.endsWith('.webp')
+          ? 'image/webp'
+          : 'image/jpeg';
       final parsed = await ref
           .read(billServiceProvider)
-          .runOcr(billId: billId, rawText: rawText);
+          .runOcr(
+            billId: billId,
+            rawText: rawText,
+            imageBytes: imageBytes,
+            imageMimeType: mimeType,
+          );
 
       state = OcrState(status: OcrScanStatus.done, items: parsed);
     } catch (e) {

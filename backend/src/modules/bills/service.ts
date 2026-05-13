@@ -236,7 +236,14 @@ export class BillService {
     broadcast(billId, { type: "item_unassigned", item_id: itemId, user_id: assignUserId });
   }
 
-  static async runOcr(userid: string, billId: string, rawText: string, imageUrl?: string) {
+  static async runOcr(
+    userid: string,
+    billId: string,
+    rawText: string,
+    imageUrl?: string,
+    imageBase64?: string,
+    imageMimeType?: string,
+  ) {
     await this.assertMember(userid, billId);
     if (imageUrl) {
       await prisma.bills.update({
@@ -244,7 +251,7 @@ export class BillService {
         data: { receipt_image_url: imageUrl },
       });
     }
-    const items = await parseReceiptText(rawText);
+    const items = await parseReceiptText(rawText, imageBase64, imageMimeType);
     return { items } as { items: ParsedItem[] };
   }
 

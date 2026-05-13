@@ -126,13 +126,33 @@ class BillService {
     required String billId,
     required String rawText,
     String? imageUrl,
+    List<int>? imageBytes,
+    String? imageMimeType,
   }) async {
+    final payload = <String, dynamic>{'raw_text': rawText};
+    if (imageUrl != null) payload['image_url'] = imageUrl;
+    if (imageBytes != null) {
+      final imageExt = imageMimeType == 'image/png'
+          ? 'png'
+          : imageMimeType == 'image/webp'
+              ? 'webp'
+              : 'jpg';
+      final contentType = imageMimeType == 'image/png'
+          ? DioMediaType('image', 'png')
+          : imageMimeType == 'image/webp'
+              ? DioMediaType('image', 'webp')
+              : DioMediaType('image', 'jpeg');
+      payload['image'] = MultipartFile.fromBytes(
+        imageBytes,
+        filename: 'receipt.$imageExt',
+        contentType: contentType,
+      );
+    }
+    final formData = FormData.fromMap(payload);
+
     final response = await _dio.post(
       '/bills/$billId/ocr',
-      data: {
-        'raw_text': rawText,
-        if (imageUrl != null) 'image_url': imageUrl,
-      },
+      data: formData,
     );
     final data = response.data as Map<String, dynamic>;
     return (data['items'] as List<dynamic>).cast<Map<String, dynamic>>();

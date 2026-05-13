@@ -6,9 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
-import 'package:thaiqr/thaiqr.dart';
 import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
+import '../bill/bill_provider.dart';
 import 'payment_service.dart';
 import 'promptpay_utils.dart';
 
@@ -79,7 +79,9 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
             amount: widget.amount,
           );
       _qrData = result['qr_data'] as String?;
-      _paymentId = result['payment_id'] as String?;
+      final payment = result['payment'] as Map<String, dynamic>?;
+      _paymentId =
+          result['payment_id'] as String? ?? payment?['id']?.toString();
       final toUser = result['to_user'] as Map<String, dynamic>?;
       _promptpayNumber = toUser?['promptpay_number'] as String?;
       _fetchedToUserName =
@@ -257,7 +259,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'ชำระให้ ${_fetchedToUserName ?? widget.toUserName}',
+                        'Pay to ${_fetchedToUserName ?? widget.toUserName}',
                         style: const TextStyle(
                           color: AppColors.primaryBlue,
                           fontSize: 14,
@@ -374,10 +376,10 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                           : null,
                       child: Text(
                         _slipBytes == null
-                            ? 'กดเลือกสลิปด้านบนก่อน'
+                            ? 'Select a slip above first'
                             : _uploadingSlip
-                            ? 'กำลังอัพโหลด...'
-                            : 'ยืนยันสลิป',
+                            ? 'Uploading...'
+                            : 'Confirm Slip',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -435,7 +437,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
         ),
         const SizedBox(height: 14),
         const Text(
-          'อัพสลิปยืนยันการโอน',
+          'Upload transfer slip',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -444,7 +446,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'แตะเพื่อเลือกรูปสลิปจากแกลเลอรี',
+          'Tap to choose a slip from gallery',
           style: TextStyle(fontSize: 13, color: AppColors.textGray),
         ),
       ],
@@ -465,7 +467,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
         ),
         const SizedBox(height: 12),
         const Text(
-          '✓ เลือกรูปแล้ว',
+          'Slip selected',
           style: TextStyle(
             color: AppColors.successGreen,
             fontSize: 14,
@@ -476,7 +478,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
         GestureDetector(
           onTap: _pickSlip,
           child: const Text(
-            'เปลี่ยนรูป',
+            'Change slip',
             style: TextStyle(
               color: AppColors.primaryBlue,
               fontSize: 13,
@@ -517,7 +519,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'สลิปพร้อมยืนยัน',
+                  'Slip ready to confirm',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -526,7 +528,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'กดปุ่มด้านล่างเพื่อยืนยันการโอน',
+                  'Tap the button below to confirm the transfer',
                   style: TextStyle(fontSize: 13, color: AppColors.textGray),
                 ),
               ],
@@ -557,7 +559,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'อัพสลิปเรียบร้อยแล้ว รอผู้รับตรวจสอบ',
+                  'Slip uploaded. Waiting for recipient review',
                   style: TextStyle(
                     color: AppColors.successGreen,
                     fontSize: 14,
@@ -582,7 +584,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
             ),
             onPressed: () => context.go('/bill/${widget.billId}/summary'),
             child: const Text(
-              'เสร็จสิ้น',
+              'Done',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
@@ -631,7 +633,7 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
       if (!mounted) return;
       setState(() => _slipBytes = bytes);
     } catch (e) {
-      _showSnackBar('เลือกรูปไม่สำเร็จ');
+      _showSnackBar('Failed to select image');
     }
   }
 
@@ -647,24 +649,27 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
             .read(paymentServiceProvider)
             .confirm(_paymentId!, slipBytes: _slipBytes);
         billSettled = result['bill_settled'] as bool? ?? false;
+      } else {
+        throw Exception('Payment was not created. Please try again.');
       }
 
       if (!mounted) return;
+      ref.invalidate(billListProvider);
       setState(() {
         _uploadingSlip = false;
         _slipUploaded = true;
       });
 
       if (billSettled) {
-        _showSnackBar('✅ บิลนี้ชำระครบแล้ว ทุกคนจ่ายครบแล้ว!');
+        _showSnackBar('This bill is fully paid. Everyone has paid!');
       } else {
-        _showSnackBar('ยืนยันสลิปเรียบร้อยแล้ว');
+        _showSnackBar('Slip confirmed successfully');
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _uploadingSlip = false);
       _showSnackBar(
-        'อัพสลิปไม่สำเร็จ: ${e.toString().replaceFirst('Exception: ', '')}',
+        'Failed to upload slip: ${e.toString().replaceFirst('Exception: ', '')}',
       );
     }
   }

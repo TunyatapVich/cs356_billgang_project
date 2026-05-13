@@ -10,8 +10,10 @@ Extract every food/drink line item from the receipt below and return ONLY valid 
 
 Rules:
 - name: the menu/item name as printed (Thai or English).
+- Preserve Thai item names exactly. Do not transliterate Thai into Latin text.
 - quantity: integer count of that item (default 1 if missing).
 - unit_price: price per single unit, NOT line total. If only line total is shown, divide by quantity.
+- For table receipts with columns like QTY, ITEM, PRICE, AMOUNT, each table row is one item.
 - Skip subtotals, service charge, VAT, totals, change, cash, payment lines.
 - If you can't parse anything, return {"items":[]}.
 
@@ -20,13 +22,50 @@ Receipt:
 ${rawText}
 """`;
 
-const callOpenAI = async (rawText: string): Promise<ParsedItem[]> => {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY not set");
+const VISION_PROMPT = (
+  rawText: string,
+) => `You are a Thai receipt OCR and parser.
+Read the receipt image directly. Also use the OCR text below only as a hint because it may contain broken Thai.
+Return ONLY valid JSON in this shape:
+{"items":[{"name": string, "quantity": number, "unit_price": number}, ...]}
 
-  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+Rules:
+- Extract every food/drink line item from the receipt.
+- Preserve Thai item names exactly as shown in the image. Do not transliterate Thai into Latin text.
+- For table receipts with columns like QTY, ITEM, PRICE, AMOUNT, each table row is one item.
+- quantity is the QTY column, default 1 if missing.
+- unit_price is the PRICE column. If only AMOUNT is clear, use AMOUNT / quantity.
+- Skip SUBTOTAL, VAT, SERVICE CHARGE, TOTAL, payment, cashier, table, date, and header lines.
+- If a Thai item name is partially unclear, infer the closest normal Thai menu name from the visible letters and price.
+- If you can't parse anything, return {"items":[]}.
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+OCR hint:
+"""
+${rawText}
+"""`;
+
+const parseItems = (content: string): ParsedItem[] => {
+  const parsed = JSON.parse(content) as { items?: ParsedItem[] };
+  if (!Array.isArray(parsed.items))
+    throw new Error("LLM returned no items array");
+  return parsed.items
+    .map(normalizeItem)
+    .filter((i) => i.name && i.unit_price > 0);
+};
+
+const callLlamaVision = async (
+  rawText: string,
+  imageBase64: string,
+  imageMimeType: string,
+): Promise<ParsedItem[]> => {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY not set");
+
+  const model =
+    process.env.GROQ_VISION_MODEL ??
+    "meta-llama/llama-4-scout-17b-16e-instruct";
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -35,27 +74,71 @@ const callOpenAI = async (rawText: string): Promise<ParsedItem[]> => {
     body: JSON.stringify({
       model,
       response_format: { type: "json_object" },
-      messages: [{ role: "user", content: PROMPT(rawText) }],
+      temperature: 0,
+      max_completion_tokens: 1024,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: VISION_PROMPT(rawText) },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${imageMimeType};base64,${imageBase64}`,
+              },
+            },
+          ],
+        },
+      ],
     }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI responded ${res.status}: ${err}`);
+    throw new Error(`Groq Vision responded ${res.status}: ${err}`);
   }
 
   const body = (await res.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
   };
   const content = body.choices?.[0]?.message?.content;
-  if (!content) throw new Error("OpenAI empty response");
+  if (!content) throw new Error("Groq Vision empty response");
 
-  const parsed = JSON.parse(content) as { items?: ParsedItem[] };
-  if (!Array.isArray(parsed.items))
-    throw new Error("LLM returned no items array");
-  return parsed.items
-    .map(normalizeItem)
-    .filter((i) => i.name && i.unit_price > 0);
+  return parseItems(content);
+};
+
+const callLlama = async (rawText: string): Promise<ParsedItem[]> => {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY not set");
+
+  const model = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      response_format: { type: "json_object" },
+      temperature: 0,
+      messages: [{ role: "user", content: PROMPT(rawText) }],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Groq responded ${res.status}: ${err}`);
+  }
+
+  const body = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const content = body.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Groq empty response");
+
+  return parseItems(content);
 };
 
 const regexFallback = (rawText: string): ParsedItem[] => {
@@ -95,9 +178,22 @@ const normalizeItem = (item: ParsedItem): ParsedItem => ({
 
 export const parseReceiptText = async (
   rawText: string,
+  imageBase64?: string,
+  imageMimeType: string = "image/jpeg",
 ): Promise<ParsedItem[]> => {
+  if (imageBase64) {
+    try {
+      return await callLlamaVision(rawText, imageBase64, imageMimeType);
+    } catch (err) {
+      console.warn(
+        "[ocr] Vision LLM failed, using text LLM fallback:",
+        (err as Error).message,
+      );
+    }
+  }
+
   try {
-    return await callOpenAI(rawText);
+    return await callLlama(rawText);
   } catch (err) {
     console.warn(
       "[ocr] LLM failed, using regex fallback:",
