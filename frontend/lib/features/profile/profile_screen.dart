@@ -138,7 +138,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   icon: const Icon(Icons.logout, color: AppColors.textDark),
                   onPressed: () async {
                     await ref.read(authProvider.notifier).logout();
-                    if (mounted) context.go('/login');
+                    if (context.mounted) context.go('/login');
                   },
                 ),
               ],

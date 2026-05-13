@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
@@ -123,16 +124,17 @@ class BillService {
 
   Future<List<Map<String, dynamic>>> runOcr({
     required String billId,
-    required String rawText,
-    String? imageUrl,
+    required Uint8List imageBytes,
+    String mimeType = 'image/jpeg',
   }) async {
-    final response = await _dio.post(
-      '/bills/$billId/ocr',
-      data: {
-        'raw_text': rawText,
-        'image_url': ?imageUrl,
-      },
-    );
+    final formData = FormData.fromMap({
+      'image': MultipartFile.fromBytes(
+        imageBytes,
+        filename: 'receipt_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        contentType: DioMediaType.parse(mimeType),
+      ),
+    });
+    final response = await _dio.post('/bills/$billId/ocr', data: formData);
     final data = response.data as Map<String, dynamic>;
     return (data['items'] as List<dynamic>).cast<Map<String, dynamic>>();
   }

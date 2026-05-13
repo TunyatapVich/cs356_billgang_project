@@ -80,10 +80,10 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
     try {
       final picked = await _picker.pickImage(source: source, imageQuality: 85);
       if (picked == null) return;
-      final imageFile = File(picked.path);
+      final imageBytes = await picked.readAsBytes();
       if (!mounted) return;
-      setState(() => _pickedImage = imageFile);
-      await ref.read(ocrProvider.notifier).scan(widget.billId, imageFile);
+      setState(() => _pickedImage = File(picked.path));
+      await ref.read(ocrProvider.notifier).scan(widget.billId, imageBytes);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
