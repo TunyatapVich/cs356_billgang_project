@@ -78,7 +78,8 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
             amount: widget.amount,
           );
       _qrData = result['qr_data'] as String?;
-      _paymentId = result['payment_id'] as String?;
+      _paymentId =
+          (result['payment'] as Map<String, dynamic>?)?['id'] as String?;
       final toUser = result['to_user'] as Map<String, dynamic>?;
       _promptpayNumber = toUser?['promptpay_number'] as String?;
       _fetchedToUserName =
@@ -637,16 +638,18 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   Future<void> _confirmSlip() async {
     if (_slipBytes == null || _uploadingSlip) return;
 
+    if (_paymentId == null) {
+      _showSnackBar('Payment not initialized — go back and try again.');
+      return;
+    }
+
     setState(() => _uploadingSlip = true);
 
     try {
-      bool billSettled = false;
-      if (_paymentId != null) {
-        final result = await ref
-            .read(paymentServiceProvider)
-            .confirm(_paymentId!, slipBytes: _slipBytes);
-        billSettled = result['bill_settled'] as bool? ?? false;
-      }
+      final result = await ref
+          .read(paymentServiceProvider)
+          .confirm(_paymentId!, slipBytes: _slipBytes);
+      final billSettled = result['bill_settled'] as bool? ?? false;
 
       if (!mounted) return;
       setState(() {
@@ -654,16 +657,16 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
         _slipUploaded = true;
       });
 
-      if (billSettled) {
-        _showSnackBar('✅ บิลนี้ชำระครบแล้ว ทุกคนจ่ายครบแล้ว!');
-      } else {
-        _showSnackBar('ยืนยันสลิปเรียบร้อยแล้ว');
-      }
+      _showSnackBar(
+        billSettled
+            ? '✅ บิลนี้ชำระครบแล้ว ทุกคนจ่ายครบแล้ว!'
+            : 'ยืนยันสลิปเรียบร้อยแล้ว',
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _uploadingSlip = false);
       _showSnackBar(
-        'อัพสลิปไม่สำเร็จ: ${e.toString().replaceFirst('Exception: ', '')}',
+        'Upload failed: ${e.toString().replaceFirst('Exception: ', '')}',
       );
     }
   }
