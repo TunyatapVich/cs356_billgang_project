@@ -616,13 +616,26 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                         ],
                       ),
                     ),
-                    Text(
-                      '฿${owed.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: AppColors.primaryBlue,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '฿${owed.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: AppColors.primaryBlue,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (hasPaid) ...[
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.check_circle,
+                            color: AppColors.successGreen,
+                            size: 16,
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
