@@ -11,8 +11,14 @@ import '../../core/storage/token_storage.dart';
 class AssignMember {
   final String id;
   final String name;
-  final String avatar;
-  const AssignMember({required this.id, required this.name, required this.avatar});
+  final String avatar; // Initials
+  final String? avatarUrl; // Profile image URL
+  const AssignMember({
+    required this.id,
+    required this.name,
+    required this.avatar,
+    this.avatarUrl,
+  });
 }
 
 // ── Assign state ──────────────────────────────────────────────────────────────
@@ -54,8 +60,8 @@ class AssignState {
 
   String? get selectedMemberId =>
       selectedMemberIndex >= 0 && selectedMemberIndex < members.length
-          ? members[selectedMemberIndex].id
-          : null;
+      ? members[selectedMemberIndex].id
+      : null;
 }
 
 // ── AssignNotifier ────────────────────────────────────────────────────────────
@@ -89,18 +95,24 @@ class AssignNotifier extends Notifier<AssignState> {
           .toList();
 
       final membersRaw = (data['members'] as List<dynamic>?) ?? [];
-      var members = membersRaw.cast<Map<String, dynamic>>().map((m) {
-        final user = m['user'] as Map<String, dynamic>? ?? {};
-        final displayName =
-            (user['display_name'] ?? user['email'] ?? 'U') as String;
-        final initials =
-            displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
-        return AssignMember(
-          id: (m['user_id'] ?? user['id'] ?? '').toString(),
-          name: displayName,
-          avatar: initials,
-        );
-      }).where((m) => m.id.isNotEmpty).toList();
+      var members = membersRaw
+          .cast<Map<String, dynamic>>()
+          .map((m) {
+            final user = m['user'] as Map<String, dynamic>? ?? {};
+            final displayName =
+                (user['display_name'] ?? user['email'] ?? 'U') as String;
+            final initials = displayName.isNotEmpty
+                ? displayName[0].toUpperCase()
+                : 'U';
+            return AssignMember(
+              id: (m['user_id'] ?? user['id'] ?? '').toString(),
+              name: displayName,
+              avatar: initials,
+              avatarUrl: user['avatar_url'] as String?,
+            );
+          })
+          .where((m) => m.id.isNotEmpty)
+          .toList();
 
       // Fallback: API should always include the current user as a member,
       // but if parsing fails or the list is empty, synthesise an entry so
@@ -110,7 +122,14 @@ class AssignNotifier extends Notifier<AssignState> {
         if (currentUser != null) {
           final name = currentUser.displayName ?? currentUser.email;
           final avatar = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-          members = [AssignMember(id: currentUser.id, name: name, avatar: avatar)];
+          members = [
+            AssignMember(
+              id: currentUser.id,
+              name: name,
+              avatar: avatar,
+              avatarUrl: currentUser.avatarUrl,
+            ),
+          ];
         }
       } else {
         // Ensure the current user is present in the members list; if not,
@@ -120,13 +139,21 @@ class AssignNotifier extends Notifier<AssignState> {
             !members.any((m) => m.id == currentUser.id)) {
           final name = currentUser.displayName ?? currentUser.email;
           final avatar = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-          members.add(AssignMember(id: currentUser.id, name: name, avatar: avatar));
+          members.add(
+            AssignMember(
+              id: currentUser.id,
+              name: name,
+              avatar: avatar,
+              avatarUrl: currentUser.avatarUrl,
+            ),
+          );
         }
       }
 
       // paid_by comes from the serialized bill; fall back to created_by for new bills
       final billData = data['bill'] as Map<String, dynamic>?;
-      final payerId = (billData?['paid_by'] ?? billData?['created_by'])?.toString();
+      final payerId = (billData?['paid_by'] ?? billData?['created_by'])
+          ?.toString();
 
       // Pre-select the current user if they are in the members list,
       // otherwise default to index 0.
@@ -271,7 +298,9 @@ class AssignNotifier extends Notifier<AssignState> {
   void _applyAssign(String itemId, String userId) {
     final item = state.items.where((i) => i.id == itemId).firstOrNull;
     if (item == null) return;
-    if (item.assignedTo?.contains(userId) ?? false) return; // already present, no-op
+    if (item.assignedTo?.contains(userId) ?? false) {
+      return; // already present, no-op
+    }
     state = state.copyWith(
       items: [
         for (final i in state.items)
@@ -286,12 +315,16 @@ class AssignNotifier extends Notifier<AssignState> {
   void _applyUnassign(String itemId, String userId) {
     final item = state.items.where((i) => i.id == itemId).firstOrNull;
     if (item == null) return;
-    if (!(item.assignedTo?.contains(userId) ?? false)) return; // already absent, no-op
+    if (!(item.assignedTo?.contains(userId) ?? false)) {
+      return; // already absent, no-op
+    }
     state = state.copyWith(
       items: [
         for (final i in state.items)
           if (i.id == itemId)
-            i.copyWith(assignedTo: i.assignedTo!.where((id) => id != userId).toList())
+            i.copyWith(
+              assignedTo: i.assignedTo!.where((id) => id != userId).toList(),
+            )
           else
             i,
       ],
@@ -301,5 +334,5 @@ class AssignNotifier extends Notifier<AssignState> {
 
 final assignProvider =
     NotifierProvider.autoDispose<AssignNotifier, AssignState>(
-  AssignNotifier.new,
-);
+      AssignNotifier.new,
+    );

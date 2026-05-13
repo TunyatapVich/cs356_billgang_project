@@ -9,7 +9,7 @@ export const PaymentCreatePayload = t.Object({
 export type PaymentCreateRequest = Static<typeof PaymentCreatePayload>;
 
 export const PaymentConfirmPayload = t.Object({
-  slip_url: t.Optional(t.String()),
+  slip: t.Optional(t.File()),
 });
 export type PaymentConfirmRequest = Static<typeof PaymentConfirmPayload>;
 

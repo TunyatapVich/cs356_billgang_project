@@ -48,3 +48,4 @@ state = AsyncData(User)  ──► UI update ไป home
 - Token จาก backend มี expiry — ถ้าหมดแล้ว `getProfile()` จะ fail → ไป login
 - ทุกครั้งที่ app launch, `build()` จะ validate token กับ backend ก่อน restore session (ไม่ trust token เฉยๆ)
 - `logout()` ลบ token ออก → state = `null` → ไป login screen
+- **Cache Invalidation:** ทุกครั้งที่มีการ login, logout หรือ register จะมีการเรียก `ref.invalidate(billListProvider)` เพื่อล้าง cache เดิม ป้องกันปัญหา cross-account state contamination (User B เห็นบิลของ User A ที่ค้างใน memory)

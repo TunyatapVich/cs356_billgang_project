@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../storage/token_storage.dart';
 
@@ -12,43 +11,61 @@ String get _baseUrl {
   return 'http://localhost:3000';
 }
 
-String get cloudinaryCloudName {
-  const cloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME', defaultValue: '');
-  if (cloudName.isEmpty) {
-    return 'affea2eece1afb04bd3f76ccf7eb10'; // from console URL (c- prefix stripped)
-  }
-  return cloudName;
-}
+// ── Shared interceptor setup ──────────────────────────────────────────────
 
-String get cloudinaryApiKey {
-  final key = dotenv.env['CLOUDINARY_API_KEY'] ?? '';
-  if (key.isEmpty) {
-    throw Exception('CLOUDINARY_API_KEY not set in .env');
-  }
-  return key;
-}
+/// Converts a raw [DioException] 4xx/5xx response into a readable [Exception].
+/// This means every service (bill, auth, settlement…) gets clean error strings
+/// for free — no per-screen DioException parsing needed.
+void _addInterceptors(Dio dio) {
+  // 🔍 Network logging — equivalent to the browser Network tab.
+  // Shows full request/response bodies in the Flutter debug console.
+  // Remove LogInterceptor before releasing to production.
+  dio.interceptors.add(LogInterceptor(
+    requestBody: true,
+    responseBody: true,
+    logPrint: (obj) => debugPrint(obj.toString()),
+  ));
 
-String get cloudinaryApiSecret {
-  final secret = dotenv.env['CLOUDINARY_API_SECRET'] ?? '';
-  if (secret.isEmpty) {
-    throw Exception('CLOUDINARY_API_SECRET not set in .env');
-  }
-  return secret;
-}
+  // 🚨 Convert DioException → readable Exception so UI just does e.toString().
+  dio.interceptors.add(InterceptorsWrapper(
+    onError: (DioException err, ErrorInterceptorHandler handler) {
+      final body = err.response?.data;
+      String? message;
 
-String get cloudinaryUploadUrl =>
-    'https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload';
+      if (body is Map) {
+        // Elysia / most backends: { message: "..." } or { error: "..." }
+        message = (body['message'] ?? body['error'])?.toString();
+      } else if (body is String && body.isNotEmpty) {
+        message = body;
+      }
+
+      if (message != null && message.isNotEmpty) {
+        handler.reject(
+          DioException(
+            requestOptions: err.requestOptions,
+            response: err.response,
+            type: err.type,
+            error: Exception(message),
+          ),
+        );
+      } else {
+        handler.next(err);
+      }
+    },
+  ));
+}
 
 // Unauthenticated Dio — for login / register (no token needed)
-// Same idea as: export const axios = axios.create({ baseURL }) in Next.js
 final dioProvider = Provider<Dio>((ref) {
-  return Dio(BaseOptions(baseUrl: _baseUrl));
+  final dio = Dio(BaseOptions(baseUrl: _baseUrl));
+  _addInterceptors(dio);
+  return dio;
 });
 
 // Authenticated Dio — for protected endpoints (attaches JWT from storage)
-// Use this in bill, assign, settlement services.
 final authDioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(baseUrl: _baseUrl));
+  _addInterceptors(dio);
 
   dio.interceptors.add(
     InterceptorsWrapper(

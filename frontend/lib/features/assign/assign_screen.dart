@@ -33,7 +33,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
-          onPressed: () => context.go('/bill/${widget.billId}/summary'),
+          onPressed: () => context.go('/bill/${widget.billId}/items'),
         ),
         title: const Text(
           'Assign',
@@ -154,7 +154,7 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                         );
                       }
                     }
-                    if (mounted) Navigator.pop(ctx);
+                    if (ctx.mounted) Navigator.pop(ctx);
                   },
                 );
               }),
@@ -302,11 +302,26 @@ class _AssignScreenState extends ConsumerState<AssignScreen> {
                                 ),
                               ),
                               child: Center(
-                                child: Text(m.avatar, style: TextStyle(
-                                  color: sel ? AppColors.primaryBlue : AppColors.textGray,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                )),
+                                child: m.avatarUrl != null && m.avatarUrl!.isNotEmpty
+                                    ? ClipOval(
+                                        child: Image.network(
+                                          m.avatarUrl!,
+                                          width: 48,
+                                          height: 48,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              Text(m.avatar, style: TextStyle(
+                                                color: sel ? AppColors.primaryBlue : AppColors.textGray,
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                              )),
+                                        ),
+                                      )
+                                    : Text(m.avatar, style: TextStyle(
+                                        color: sel ? AppColors.primaryBlue : AppColors.textGray,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                      )),
                               ),
                             ),
                             if (isPayer)

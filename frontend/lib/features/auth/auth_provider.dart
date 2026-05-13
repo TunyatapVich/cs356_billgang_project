@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/storage/token_storage.dart';
+import '../bill/bill_provider.dart';
 import 'auth_service.dart';
 
 class User {
@@ -45,21 +47,31 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = await AsyncValue.guard(() async {
       final data = await ref.read(authServiceProvider).login(email, password);
       await TokenStorage.save(data['token']);
+      ref.invalidate(billListProvider); // Clear old cached bills
       return User.fromJson(data['user'] as Map<String, dynamic>);
     });
   }
 
-  Future<void> register(String email, String phone, String password, String passwordConfirm) async {
+  Future<void> register(
+    String email,
+    String phone,
+    String password,
+    String passwordConfirm,
+  ) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final data = await ref.read(authServiceProvider).register(email, phone, password, passwordConfirm);
+      final data = await ref
+          .read(authServiceProvider)
+          .register(email, phone, password, passwordConfirm);
       await TokenStorage.save(data['token']);
+      ref.invalidate(billListProvider); // Clear cached bills for the new user
       return User.fromJson(data['user'] as Map<String, dynamic>);
     });
   }
 
   Future<void> logout() async {
     await TokenStorage.delete();
+    ref.invalidate(billListProvider); // Clear cached bills immediately
     state = const AsyncData(null);
   }
 
@@ -73,16 +85,21 @@ class AuthNotifier extends AsyncNotifier<User?> {
   Future<void> updateProfile({
     String? displayName,
     String? avatarUrl,
+    Uint8List? avatarBytes,
     String? promptpayNumber,
   }) async {
-    final data = await ref.read(authServiceProvider).updateProfile(
-      displayName: displayName,
-      avatarUrl: avatarUrl,
-      promptpayNumber: promptpayNumber,
-    );
+    final data = await ref
+        .read(authServiceProvider)
+        .updateProfile(
+          displayName: displayName,
+          avatarUrl: avatarUrl,
+          avatarBytes: avatarBytes,
+          promptpayNumber: promptpayNumber,
+        );
     final userJson = data['user'] as Map<String, dynamic>?;
     if (userJson != null) {
       state = AsyncData(User.fromJson(userJson));
+      ref.invalidate(billListProvider);
     }
   }
 }

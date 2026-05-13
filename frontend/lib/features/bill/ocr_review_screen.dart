@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
 import 'bill_provider.dart';
-import 'bill_service.dart';
 
-// Editable row that holds user-tweaked values before bulk-saving.
+// Holds TextEditingControllers for one editable row.
 class _EditableItem {
   final TextEditingController name;
   final TextEditingController quantity;
@@ -47,126 +45,102 @@ class OcrReviewScreen extends ConsumerStatefulWidget {
 }
 
 class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
-
   final _picker = ImagePicker();
-  final _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
-  List<_EditableItem> _items = [];
-  bool _scanning = false;
-  bool _saving = false;
-  String? _error;
+  // Pure UI state — not derived from the provider
   File? _pickedImage;
+  List<_EditableItem> _editableItems = [];
+  bool _saving = false;
 
   @override
   void dispose() {
-    for (final item in _items) {
+    for (final item in _editableItems) {
       item.dispose();
     }
-    _textRecognizer.close();
     super.dispose();
   }
 
+  // Sync editable rows from freshly parsed provider items.
+  void _syncEditableItems(List<Map<String, dynamic>> parsed) {
+    for (final item in _editableItems) {
+      item.dispose();
+    }
+    _editableItems = parsed
+        .map(
+          (json) => _EditableItem(
+            nameVal: json['name'] as String? ?? '',
+            quantityVal: (json['quantity'] as num?)?.toInt() ?? 1,
+            unitPriceVal: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
+          ),
+        )
+        .toList();
+  }
+
   Future<void> _pickAndScan(ImageSource source) async {
-    setState(() {
-      _scanning = true;
-      _error = null;
-    });
-
     try {
-      final picked = await _picker.pickImage(
-        source: source,
-        imageQuality: 85,
-      );
-      if (picked == null) {
-        setState(() => _scanning = false);
-        return;
-      }
-
-      final imageFile = File(picked.path);
-      setState(() => _pickedImage = imageFile);
-
-      // ML Kit on-device OCR
-      final inputImage = InputImage.fromFile(imageFile);
-      final recognised = await _textRecognizer.processImage(inputImage);
-      final rawText = recognised.text;
-
-      if (rawText.trim().isEmpty) {
-        setState(() {
-          _error = 'No text detected. Try a clearer image.';
-          _scanning = false;
-        });
-        return;
-      }
-
-      // Send raw OCR text to backend LLM parser
-      final parsed = await ref.read(billServiceProvider).runOcr(
-            billId: widget.billId,
-            rawText: rawText,
-          );
-
-      for (final item in _items) {
-        item.dispose();
-      }
-      setState(() {
-        _items = parsed
-            .map(
-              (json) => _EditableItem(
-                nameVal: json['name'] as String? ?? '',
-                quantityVal: (json['quantity'] as num?)?.toInt() ?? 1,
-                unitPriceVal: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
-              ),
-            )
-            .toList();
-        _scanning = false;
-      });
+      final picked = await _picker.pickImage(source: source, imageQuality: 85);
+      if (picked == null) return;
+      final imageBytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() => _pickedImage = File(picked.path));
+      await ref.read(ocrProvider.notifier).scan(widget.billId, imageBytes);
     } catch (e) {
-      setState(() {
-        _error = 'Scan failed: $e';
-        _scanning = false;
-      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open image: $e')),
+      );
     }
   }
 
   void _removeItem(int index) {
-    _items[index].dispose();
-    setState(() => _items.removeAt(index));
+    _editableItems[index].dispose();
+    setState(() => _editableItems.removeAt(index));
   }
 
   Future<void> _confirm() async {
-    if (_items.isEmpty) return;
+    if (_editableItems.isEmpty || _saving) return;
 
-    final validItems = _items
+    final validItems = _editableItems
         .map((i) => i.toJson())
         .where((j) =>
             (j['name'] as String).isNotEmpty &&
             (j['unit_price'] as double) > 0)
         .toList();
 
-    if (validItems.isEmpty) {
-      setState(() => _error = 'No valid items to add.');
-      return;
-    }
+    if (validItems.isEmpty) return;
 
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-
+    setState(() => _saving = true);
     try {
       await ref
           .read(billItemsProvider(widget.billId).notifier)
           .addItemsBulk(validItems);
-      if (mounted) context.go('/bill/${widget.billId}/summary');
+      if (mounted) context.go('/bill/${widget.billId}/items');
     } catch (e) {
-      setState(() {
-        _error = 'Failed to save items: $e';
-        _saving = false;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+        setState(() => _saving = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final ocrState = ref.watch(ocrProvider);
+
+    // Sync editable rows once scan completes.
+    ref.listen<OcrState>(ocrProvider, (prev, next) {
+      if (next.status == OcrScanStatus.done &&
+          prev?.status != OcrScanStatus.done) {
+        setState(() => _syncEditableItems(next.items));
+      }
+    });
+
+    final isScanning = ocrState.status == OcrScanStatus.scanning;
+    final isDone = ocrState.status == OcrScanStatus.done;
+    final hasItems = _editableItems.isNotEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.bgLight,
       appBar: AppBar(
@@ -194,32 +168,33 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildPickerCard(),
-                  if (_error != null) ...[
+                  _buildPickerCard(isScanning),
+                  if (ocrState.error != null) ...[
                     const SizedBox(height: 12),
-                    Text(
-                      _error!,
-                      style: const TextStyle(color: AppColors.errorRed, fontSize: 13),
-                    ),
+                    _buildErrorBanner(ocrState.error!),
                   ],
-                  if (_items.isNotEmpty) ...[
+                  if (isDone && !hasItems && ocrState.error == null) ...[
+                    const SizedBox(height: 20),
+                    _buildNoItemsFound(),
+                  ],
+                  if (hasItems) ...[
                     const SizedBox(height: 24),
                     _buildReviewHeader(),
                     const SizedBox(height: 12),
                     ..._buildItemRows(),
-                    _buildAddManualRow(),
                   ],
+                  if (isDone) _buildAddManualRow(),
                 ],
               ),
             ),
           ),
-          if (_items.isNotEmpty) _buildConfirmBar(),
+          if (hasItems) _buildConfirmBar(),
         ],
       ),
     );
   }
 
-  Widget _buildPickerCard() {
+  Widget _buildPickerCard(bool isScanning) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -265,7 +240,8 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                     SizedBox(height: 3),
                     Text(
                       'ML Kit reads text on-device, then our AI structures it.',
-                      style: TextStyle(color: AppColors.textGray, fontSize: 12),
+                      style:
+                          TextStyle(color: AppColors.textGray, fontSize: 12),
                     ),
                   ],
                 ),
@@ -285,7 +261,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
             ),
           ],
           const SizedBox(height: 16),
-          _scanning
+          isScanning
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
@@ -303,7 +279,8 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                         SizedBox(width: 12),
                         Text(
                           'Reading receipt…',
-                          style: TextStyle(color: AppColors.textGray, fontSize: 13),
+                          style: TextStyle(
+                              color: AppColors.textGray, fontSize: 13),
                         ),
                       ],
                     ),
@@ -371,7 +348,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
         ),
         const Spacer(),
         Text(
-          '${_items.length} items',
+          '${_editableItems.length} items',
           style: const TextStyle(color: AppColors.textGray, fontSize: 13),
         ),
       ],
@@ -379,8 +356,8 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
   }
 
   List<Widget> _buildItemRows() {
-    return List.generate(_items.length, (i) {
-      final item = _items[i];
+    return List.generate(_editableItems.length, (i) {
+      final item = _editableItems[i];
       return Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
@@ -416,9 +393,8 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
               child: _editCell(
                 item.unitPrice,
                 hint: 'Price',
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(
                     RegExp(r'^\d*\.?\d{0,2}'),
@@ -461,13 +437,68 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
         style: const TextStyle(fontSize: 13, color: AppColors.textDark),
         decoration: InputDecoration(
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 8,
-          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           hintText: hint,
-          hintStyle: const TextStyle(color: AppColors.textGray, fontSize: 12),
+          hintStyle:
+              const TextStyle(color: AppColors.textGray, fontSize: 12),
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.errorRed.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: AppColors.errorRed, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(color: AppColors.errorRed, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoItemsFound() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.inputBorder),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.receipt_long_outlined, color: AppColors.textGray, size: 36),
+          SizedBox(height: 10),
+          Text(
+            'No items detected',
+            style: TextStyle(
+              color: AppColors.textDark,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Try a clearer photo, or add items manually below.',
+            style: TextStyle(color: AppColors.textGray, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -476,17 +507,16 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
     return TextButton.icon(
       onPressed: () {
         setState(() {
-          _items.add(_EditableItem(
-            nameVal: '',
-            quantityVal: 1,
-            unitPriceVal: 0.0,
-          ));
+          _editableItems.add(
+            _EditableItem(nameVal: '', quantityVal: 1, unitPriceVal: 0.0),
+          );
         });
       },
       icon: const Icon(Icons.add, color: AppColors.primaryBlue, size: 18),
       label: const Text(
         'Add row',
-        style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
+        style: TextStyle(
+            color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -531,7 +561,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                   ),
                 )
               : Text(
-                  'Add ${_items.length} item${_items.length == 1 ? '' : 's'}',
+                  'Add ${_editableItems.length} item${_editableItems.length == 1 ? '' : 's'}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

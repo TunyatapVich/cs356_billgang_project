@@ -6,10 +6,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
-import 'package:thaiqr/thaiqr.dart';
 import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import 'payment_service.dart';
+import 'promptpay_utils.dart';
 
 class PaidScreen extends ConsumerStatefulWidget {
   const PaidScreen({
@@ -62,26 +62,35 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   }
 
   Future<void> _loadQrData() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final currentUser = ref.read(authProvider).value;
       if (currentUser == null) throw Exception('Not authenticated');
-      final result = await ref.read(paymentServiceProvider).create(
-        billId: widget.billId,
-        fromUserId: currentUser.id,
-        toUserId: widget.toUserId,
-        amount: widget.amount,
-      );
+      final result = await ref
+          .read(paymentServiceProvider)
+          .create(
+            billId: widget.billId,
+            fromUserId: currentUser.id,
+            toUserId: widget.toUserId,
+            amount: widget.amount,
+          );
       _qrData = result['qr_data'] as String?;
       _paymentId = result['payment_id'] as String?;
       final toUser = result['to_user'] as Map<String, dynamic>?;
       _promptpayNumber = toUser?['promptpay_number'] as String?;
-      _fetchedToUserName = toUser?['display_name'] as String? ?? _fetchedToUserName;
+      _fetchedToUserName =
+          toUser?['display_name'] as String? ?? _fetchedToUserName;
       if (!mounted) return;
       setState(() => _loading = false);
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = e; _loading = false; });
+      setState(() {
+        _error = e;
+        _loading = false;
+      });
     }
   }
 
@@ -90,7 +99,9 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     setState(() => _saving = true);
 
     try {
-      final Uint8List? imageBytes = await _screenshotController.capture(pixelRatio: 3.0);
+      final Uint8List? imageBytes = await _screenshotController.capture(
+        pixelRatio: 3.0,
+      );
       if (imageBytes == null) {
         _showSnackBar('Failed to capture QR code');
         return;
@@ -163,8 +174,8 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildError()
-              : _buildContent(),
+          ? _buildError()
+          : _buildContent(),
     );
   }
 
@@ -175,17 +186,25 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: AppColors.errorRed, size: 42),
+            const Icon(
+              Icons.error_outline,
+              color: AppColors.errorRed,
+              size: 42,
+            ),
             const SizedBox(height: 12),
-            Text(_error.toString(),
-                style: const TextStyle(color: AppColors.textGray, fontSize: 13),
-                textAlign: TextAlign.center),
+            Text(
+              _error.toString(),
+              style: const TextStyle(color: AppColors.textGray, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryBlue,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: _loadQrData,
               child: const Text('Try Again'),
@@ -201,10 +220,13 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
       return _buildNoPromptpay();
     }
 
-    final generator = ThaiQRGenerator();
-    final qrPayload = generator.generateCodeFromMobileOrId(
-      _promptpayNumber!,
-      widget.rawAmount ?? widget.amount.toStringAsFixed(2),
+    final amountDouble =
+        double.tryParse(widget.rawAmount ?? widget.amount.toStringAsFixed(2)) ??
+        widget.amount.toDouble();
+
+    final qrPayload = PromptPayUtils.generatePayload(
+      promptpayId: _promptpayNumber!,
+      amount: amountDouble,
     );
 
     return Column(
@@ -216,7 +238,10 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
               children: [
                 // To: name chip
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.dimBlue,
                     borderRadius: BorderRadius.circular(20),
@@ -224,7 +249,11 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.person_outline, color: AppColors.primaryBlue, size: 18),
+                      const Icon(
+                        Icons.person_outline,
+                        color: AppColors.primaryBlue,
+                        size: 18,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'ชำระให้ ${_fetchedToUserName ?? widget.toUserName}',
@@ -263,8 +292,11 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                             topLeft: Radius.circular(16),
                             topRight: Radius.circular(16),
                           ),
-                          child: Image.asset('assets/header.png',
-                              width: double.infinity, fit: BoxFit.cover),
+                          child: Image.asset(
+                            'assets/header.png',
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                         // QR
                         Padding(
@@ -276,7 +308,9 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  border: Border.all(color: AppColors.inputBorder),
+                                  border: Border.all(
+                                    color: AppColors.inputBorder,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: QrImageView(
@@ -288,7 +322,10 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                               ),
                               Positioned(
                                 bottom: 8,
-                                child: Image.asset('assets/logo.png', height: 32),
+                                child: Image.asset(
+                                  'assets/logo.png',
+                                  height: 32,
+                                ),
                               ),
                             ],
                           ),
@@ -301,8 +338,10 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                 const SizedBox(height: 28),
 
                 // Slip upload section
-                if (!_slipUploaded) _buildSlipUploadZone() //
-                else                _buildSlipSuccessCard(),
+                if (!_slipUploaded)
+                  _buildSlipUploadZone() //
+                else
+                  _buildSlipSuccessCard(),
 
                 const SizedBox(height: 20),
               ],
@@ -326,7 +365,8 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                       onPressed: _slipBytes != null && !_uploadingSlip
                           ? _confirmSlip
@@ -335,9 +375,12 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                         _slipBytes == null
                             ? 'กดเลือกสลิปด้านบนก่อน'
                             : _uploadingSlip
-                                ? 'กำลังอัพโหลด...'
-                                : 'ยืนยันสลิป',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            ? 'กำลังอัพโหลด...'
+                            : 'ยืนยันสลิป',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
             ),
@@ -357,7 +400,9 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _slipBytes != null ? AppColors.successGreen : AppColors.inputBorder,
+            color: _slipBytes != null
+                ? AppColors.successGreen
+                : AppColors.inputBorder,
             width: _slipBytes != null ? 2 : 1,
           ),
         ),
@@ -381,7 +426,11 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
                   padding: EdgeInsets.all(14),
                   child: CircularProgressIndicator(strokeWidth: 2.5),
                 )
-              : const Icon(Icons.upload_file, color: AppColors.primaryBlue, size: 28),
+              : const Icon(
+                  Icons.upload_file,
+                  color: AppColors.primaryBlue,
+                  size: 28,
+                ),
         ),
         const SizedBox(height: 14),
         const Text(
@@ -445,14 +494,21 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
       decoration: BoxDecoration(
         color: AppColors.successGreen.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.successGreen.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.successGreen.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [
           if (_slipBytes != null)
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.memory(_slipBytes!, width: 56, height: 56, fit: BoxFit.cover),
+              child: Image.memory(
+                _slipBytes!,
+                width: 56,
+                height: 56,
+                fit: BoxFit.cover,
+              ),
             ),
           const SizedBox(width: 14),
           const Expanded(
@@ -475,7 +531,11 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
               ],
             ),
           ),
-          const Icon(Icons.check_circle, color: AppColors.successGreen, size: 28),
+          const Icon(
+            Icons.check_circle,
+            color: AppColors.successGreen,
+            size: 28,
+          ),
         ],
       ),
     );
@@ -515,11 +575,15 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
               backgroundColor: AppColors.primaryBlue,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             onPressed: () => context.go('/bill/${widget.billId}/summary'),
-            child: const Text('เสร็จสิ้น',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            child: const Text(
+              'เสร็จสิ้น',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
         ),
       ],
@@ -533,14 +597,18 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
         children: [
           const Icon(Icons.qr_code, color: AppColors.textGray, size: 48),
           const SizedBox(height: 16),
-          const Text('No PromptPay number set',
-              style: TextStyle(color: AppColors.textGray, fontSize: 16)),
+          const Text(
+            'No PromptPay number set',
+            style: TextStyle(color: AppColors.textGray, fontSize: 16),
+          ),
           const SizedBox(height: 24),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () => context.go('/bill/${widget.billId}/summary'),
             child: const Text('Go Back'),
@@ -572,19 +640,31 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
     setState(() => _uploadingSlip = true);
 
     try {
-      final slipUrl = await uploadSlipToCloudinary(_slipBytes!);
-
+      bool billSettled = false;
       if (_paymentId != null) {
-        await ref.read(paymentServiceProvider).confirm(_paymentId!, slipUrl: slipUrl);
+        final result = await ref
+            .read(paymentServiceProvider)
+            .confirm(_paymentId!, slipBytes: _slipBytes);
+        billSettled = result['bill_settled'] as bool? ?? false;
       }
 
       if (!mounted) return;
-      setState(() { _uploadingSlip = false; _slipUploaded = true; });
-      _showSnackBar('ยืนยันสลิปเรียบร้อยแล้ว');
+      setState(() {
+        _uploadingSlip = false;
+        _slipUploaded = true;
+      });
+
+      if (billSettled) {
+        _showSnackBar('✅ บิลนี้ชำระครบแล้ว ทุกคนจ่ายครบแล้ว!');
+      } else {
+        _showSnackBar('ยืนยันสลิปเรียบร้อยแล้ว');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _uploadingSlip = false);
-      _showSnackBar('อัพสลิปไม่สำเร็จ: ${e.toString().replaceFirst('Exception: ', '')}');
+      _showSnackBar(
+        'อัพสลิปไม่สำเร็จ: ${e.toString().replaceFirst('Exception: ', '')}',
+      );
     }
   }
 }

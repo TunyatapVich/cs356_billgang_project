@@ -1,6 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/error_banner.dart';
@@ -20,6 +22,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String? _errorMessage;
   bool _isEditing = false;
   String? _displayNameError;
+  Uint8List? _pickedAvatarBytes;
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -54,25 +58,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return true;
   }
 
+  Future<void> _pickAvatar() async {
+    final pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 800,
+    );
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _pickedAvatarBytes = bytes;
+      });
+    }
+  }
+
   Future<void> _submit() async {
     if (!_validate()) return;
     if (!mounted) return;
 
     setState(() => _errorMessage = null);
-    await ref.read(authProvider.notifier).updateProfile(
-      displayName: _displayNameController.text.trim(),
-      promptpayNumber: _promptpayController.text.trim(),
-    );
+    await ref
+        .read(authProvider.notifier)
+        .updateProfile(
+          displayName: _displayNameController.text.trim(),
+          promptpayNumber: _promptpayController.text.trim(),
+          avatarBytes: _pickedAvatarBytes,
+        );
     if (!mounted) return;
 
     final authState = ref.read(authProvider);
     authState.when(
       data: (user) {
         if (user != null && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile updated')),
-          );
-          setState(() => _isEditing = false);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Profile updated')));
+          setState(() {
+            _isEditing = false;
+            _pickedAvatarBytes = null;
+          });
         }
       },
       error: (e, _) {
@@ -114,7 +138,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   icon: const Icon(Icons.logout, color: AppColors.textDark),
                   onPressed: () async {
                     await ref.read(authProvider.notifier).logout();
-                    if (mounted) context.go('/login');
+                    if (context.mounted) context.go('/login');
                   },
                 ),
               ],
@@ -159,7 +183,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   SizedBox(
                     height: 56,
                     child: OutlinedButton(
-                      onPressed: () => setState(() => _isEditing = false),
+                      onPressed: () {
+                        setState(() {
+                          _isEditing = false;
+                          _pickedAvatarBytes = null;
+                        });
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textGray,
                         side: const BorderSide(color: AppColors.inputBorder),
@@ -196,26 +225,56 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     final hasAvatar = avatarUrl != null && avatarUrl!.isNotEmpty;
 
-    return Center(
-      child: Container(
+    Widget imageWidget;
+    if (_pickedAvatarBytes != null) {
+      imageWidget = Image.memory(
+        _pickedAvatarBytes!,
+        fit: BoxFit.cover,
         width: 96,
         height: 96,
-        decoration: BoxDecoration(
-          color: AppColors.primaryBlue.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-        ),
-        child: hasAvatar
-            ? ClipOval(
-                child: Image.network(
-                  avatarUrl!,
-                  fit: BoxFit.cover,
-                  width: 96,
-                  height: 96,
-                  errorBuilder: (context, error, stackTrace) =>
-                      _buildAvatarPlaceholder(),
+      );
+    } else if (hasAvatar) {
+      imageWidget = Image.network(
+        avatarUrl!,
+        fit: BoxFit.cover,
+        width: 96,
+        height: 96,
+        errorBuilder: (context, error, stackTrace) => _buildAvatarPlaceholder(),
+      );
+    } else {
+      imageWidget = _buildAvatarPlaceholder();
+    }
+
+    return Center(
+      child: GestureDetector(
+        onTap: _isEditing ? _pickAvatar : null,
+        child: Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: ClipOval(child: imageWidget),
+            ),
+            if (_isEditing)
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryBlue,
+                  shape: BoxShape.circle,
                 ),
-              )
-            : _buildAvatarPlaceholder(),
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

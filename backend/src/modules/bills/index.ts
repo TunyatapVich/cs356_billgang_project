@@ -210,7 +210,8 @@ export const BillModule = new Elysia({ prefix: "/bills" })
         return { message: "Unauthorized" };
       }
       try {
-        return await BillService.runOcr(userid, params.id, body.raw_text, body.image_url);
+        const buffer = await body.image.arrayBuffer();
+        return await BillService.runOcr(userid, params.id, buffer, body.image.type || "image/jpeg");
       } catch (err: any) {
         return handleError(err, set);
       }

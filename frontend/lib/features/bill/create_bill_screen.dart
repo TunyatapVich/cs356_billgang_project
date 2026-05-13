@@ -13,7 +13,6 @@ class CreateBillScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
-
   final _nameController = TextEditingController();
   final _serviceController = TextEditingController(text: '0');
   final _vatController = TextEditingController(text: '7');
@@ -65,28 +64,44 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
       _error = null;
     });
 
-    await ref.read(billProvider.notifier).createBill(
-          name: name,
-          date: _date,
-          vatPercent: vat,
-          serviceChargePercent: service,
-        );
+    try {
+      await ref
+          .read(billProvider.notifier)
+          .createBill(
+            name: name,
+            date: _date,
+            vatPercent: vat,
+            serviceChargePercent: service,
+          );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final billState = ref.read(billProvider);
-    billState.when(
-      data: (bill) {
-        if (bill != null) {
-          ref.invalidate(billListProvider);
-          context.go('/bill/${bill.id}/items');
-        }
-      },
-      error: (e, _) => setState(() => _error = e.toString()),
-      loading: () {},
-    );
+      final billState = ref.read(billProvider);
+      billState.whenOrNull(
+        data: (bill) {
+          if (bill != null) {
+            ref.invalidate(billListProvider);
+            context.go('/bill/${bill.id}/items');
+          }
+        },
+        error: (e, _) => setState(() => _error = _extractError(e)),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _error = _extractError(e));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
 
-    if (mounted) setState(() => _submitting = false);
+  /// Extracts a human-readable message from a DioException or any other error.
+  /// Mirrors the same logic in auth_service.dart / login_screen.dart.
+  String _extractError(Object e) {
+    if (e is Exception) {
+      // Strip the 'Exception: ' prefix added by Dart
+      final raw = e.toString().replaceFirst('Exception: ', '');
+      return raw;
+    }
+    return e.toString();
   }
 
   @override
@@ -128,7 +143,11 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
             const SizedBox(height: 8),
             const Text(
               'Enter bill details to get started.',
-              style: TextStyle(color: AppColors.textGray, fontSize: 16, height: 1.4),
+              style: TextStyle(
+                color: AppColors.textGray,
+                fontSize: 16,
+                height: 1.4,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -156,7 +175,11 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
             color: Color(0xFFE4E6FF),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 56),
+          child: const Icon(
+            Icons.receipt_long,
+            color: AppColors.primaryBlue,
+            size: 56,
+          ),
         ),
         Positioned(
           right: 0,
@@ -220,7 +243,9 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                   controller: _serviceController,
                   label: 'Service (%)',
                   hint: '0',
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: [_decimalFormatter],
                 ),
               ),
@@ -230,7 +255,9 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                   controller: _vatController,
                   label: 'VAT (%)',
                   hint: '7',
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: [_decimalFormatter],
                 ),
               ),
@@ -278,7 +305,10 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
             inputFormatters: inputFormatters,
             decoration: InputDecoration(
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
               hintText: hint,
               hintStyle: TextStyle(
                 color: AppColors.textGray.withValues(alpha: 0.5),
@@ -302,7 +332,9 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryBlue,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           elevation: 0,
         ),
         onPressed: _submitting ? null : _submit,
@@ -347,7 +379,20 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
   }
 
   String _formatDate(DateTime date) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

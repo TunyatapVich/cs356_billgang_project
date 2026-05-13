@@ -65,9 +65,9 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
           .deleteItem(itemId);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Delete failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
       }
     }
   }
@@ -84,7 +84,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
-          onPressed: () => context.go('/bill/${widget.billId}/assign'),
+          onPressed: () => context.go('/'),
         ),
         title: const Text(
           'Add Items',
@@ -112,17 +112,15 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
         children: [
           Expanded(
             child: itemsState.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
                 child: Text(
                   'Failed to load items: $e',
                   style: const TextStyle(color: AppColors.errorRed),
                 ),
               ),
-              data: (items) => items.isEmpty
-                  ? _buildEmptyState()
-                  : _buildItemList(items),
+              data: (items) =>
+                  items.isEmpty ? _buildEmptyState() : _buildItemList(items),
             ),
           ),
           _buildAddPanel(),
@@ -153,10 +151,16 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
         const SizedBox(height: 24),
         OutlinedButton.icon(
           onPressed: () => context.go('/bill/${widget.billId}/ocr'),
-          icon: const Icon(Icons.document_scanner_outlined, color: AppColors.primaryBlue),
+          icon: const Icon(
+            Icons.document_scanner_outlined,
+            color: AppColors.primaryBlue,
+          ),
           label: const Text(
             'Scan Receipt',
-            style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: AppColors.primaryBlue,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: AppColors.primaryBlue),
@@ -207,10 +211,7 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
         }
 
         final item = items[index - 1];
-        return _ItemCard(
-          item: item,
-          onDelete: () => _deleteItem(item.id),
-        );
+        return _ItemCard(item: item, onDelete: () => _deleteItem(item.id));
       },
     );
   }
@@ -293,19 +294,13 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
   }
 
   Widget _buildNameRow() {
-    return _inputField(
-      controller: _nameController,
-      hint: 'Item name',
-    );
+    return _inputField(controller: _nameController, hint: 'Item name');
   }
 
   Widget _buildQtyPriceRow() {
     return Row(
       children: [
-        Expanded(
-          flex: 3,
-          child: _qtyStepper(),
-        ),
+        Expanded(flex: 3, child: _qtyStepper()),
         const SizedBox(width: 10),
         Expanded(
           flex: 4,
@@ -421,7 +416,6 @@ class _ItemCard extends StatelessWidget {
   final BillItem item;
   final VoidCallback onDelete;
 
-
   @override
   Widget build(BuildContext context) {
     return Dismissible(
@@ -462,8 +456,11 @@ class _ItemCard extends StatelessWidget {
                 color: const Color(0xFFE4E6FF),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.fastfood_outlined,
-                  color: AppColors.primaryBlue, size: 18),
+              child: const Icon(
+                Icons.fastfood_outlined,
+                color: AppColors.primaryBlue,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -497,7 +494,10 @@ class _ItemCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'x${item.quantity}  ·  ฿${item.unitPrice.toStringAsFixed(2)}',
-                    style: const TextStyle(color: AppColors.textGray, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppColors.textGray,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),

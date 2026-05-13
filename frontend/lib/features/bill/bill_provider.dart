@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'bill_service.dart';
 
@@ -39,26 +40,54 @@ class Bill {
   factory Bill.fromJson(Map<String, dynamic> json) => Bill(
     id: (json['id'] ?? json['Id'] ?? '').toString(),
     name: (json['name'] ?? json['Name'] ?? '').toString(),
-    date: DateTime.tryParse((json['date'] ?? json['Date'] ?? '').toString()) ?? DateTime.now(),
-    createdBy: (json['created_by'] ?? json['createdBy'] ?? json['CreatedBy'] ?? '').toString(),
+    date:
+        DateTime.tryParse((json['date'] ?? json['Date'] ?? '').toString()) ??
+        DateTime.now(),
+    createdBy:
+        (json['created_by'] ?? json['createdBy'] ?? json['CreatedBy'] ?? '')
+            .toString(),
     paidBy: _parseString(json['paid_by'] ?? json['paidBy']),
     status: (json['status'] ?? json['Status'] ?? 'active').toString(),
-    inviteCode: (json['invite_code'] ?? json['inviteCode'] ?? json['InviteCode'] ?? '').toString(),
-    createdAt: DateTime.tryParse((json['created_at'] ?? json['createdAt'] ?? json['CreatedAt'] ?? '').toString()) ?? DateTime.now(),
-    serviceChargePercent: _toDouble(json['service_charge_pct'] ?? json['serviceChargePct'] ?? json['ServiceChargePct']),
+    inviteCode:
+        (json['invite_code'] ?? json['inviteCode'] ?? json['InviteCode'] ?? '')
+            .toString(),
+    createdAt:
+        DateTime.tryParse(
+          (json['created_at'] ?? json['createdAt'] ?? json['CreatedAt'] ?? '')
+              .toString(),
+        ) ??
+        DateTime.now(),
+    serviceChargePercent: _toDouble(
+      json['service_charge_pct'] ??
+          json['serviceChargePct'] ??
+          json['ServiceChargePct'],
+    ),
     vatPercent: _toDouble(json['vat_pct'] ?? json['vatPct'] ?? json['VatPct']),
-    receiptImageUrl: (json['receipt_image_url'] ?? json['receiptImageUrl'] ?? json['ReceiptImageUrl'])?.toString(),
-    memberCount: (json['member_count'] ?? json['memberCount'] ?? json['MemberCount'] ?? 0) as int,
-    ownerPromptpay: (json['owner_promptpay'] ?? json['ownerPromptpay'] ?? json['OwnerPromptpay'])?.toString(),
+    receiptImageUrl:
+        (json['receipt_image_url'] ??
+                json['receiptImageUrl'] ??
+                json['ReceiptImageUrl'])
+            ?.toString(),
+    memberCount:
+        (json['member_count'] ??
+                json['memberCount'] ??
+                json['MemberCount'] ??
+                0)
+            as int,
+    ownerPromptpay:
+        (json['owner_promptpay'] ??
+                json['ownerPromptpay'] ??
+                json['OwnerPromptpay'])
+            ?.toString(),
   );
 
-  Bill copyWith({String? paidBy}) => Bill(
+  Bill copyWith({String? paidBy, String? status}) => Bill(
     id: id,
     name: name,
     date: date,
     createdBy: createdBy,
     paidBy: paidBy ?? this.paidBy,
-    status: status,
+    status: status ?? this.status,
     inviteCode: inviteCode,
     createdAt: createdAt,
     serviceChargePercent: serviceChargePercent,
@@ -95,13 +124,20 @@ class BillItem {
   factory BillItem.fromJson(Map<String, dynamic> json) {
     // item_assigns comes from backend as array of {user_id: string} objects
     final assigns = (json['item_assigns'] as List<dynamic>?) ?? [];
-    final assignedTo = assigns.map((a) => (a['user_id'] ?? a['userId'] ?? '') as String).toList();
+    final assignedTo = assigns
+        .map((a) => (a['user_id'] ?? a['userId'] ?? '') as String)
+        .toList();
     return BillItem(
       id: (json['id'] ?? json['Id'] ?? '').toString(),
-      billId: (json['bill_id'] ?? json['billId'] ?? json['BillId'] ?? '').toString(),
+      billId: (json['bill_id'] ?? json['billId'] ?? json['BillId'] ?? '')
+          .toString(),
       name: (json['name'] ?? json['Name'] ?? '').toString(),
       quantity: (json['quantity'] ?? json['Quantity'] ?? 1) as int,
-      unitPrice: _toDouble(json['unit_price'] ?? json['unitPrice'] ?? json['UnitPrice']) ?? 0.0,
+      unitPrice:
+          _toDouble(
+            json['unit_price'] ?? json['unitPrice'] ?? json['UnitPrice'],
+          ) ??
+          0.0,
       assignedTo: assignedTo,
     );
   }
@@ -153,7 +189,9 @@ class BillListNotifier extends AsyncNotifier<List<Bill>> {
   }
 
   Future<void> refreshBills() async {
-    state = state.whenData((data) => data); // preserve current data while loading
+    state = state.whenData(
+      (data) => data,
+    ); // preserve current data while loading
     final fresh = await AsyncValue.guard(() async {
       final data = await ref.read(billServiceProvider).listBills();
       return data.map(Bill.fromJson).toList();
@@ -180,7 +218,9 @@ class BillNotifier extends AsyncNotifier<Bill?> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final data = await ref.read(billServiceProvider).createBill(
+      final data = await ref
+          .read(billServiceProvider)
+          .createBill(
             name: name,
             date: date,
             vatPercent: vatPercent,
@@ -231,7 +271,9 @@ class BillItemsNotifier extends AsyncNotifier<List<BillItem>> {
     state = AsyncData([...current, tempItem]);
 
     try {
-      final json = await ref.read(billServiceProvider).addItem(
+      final json = await ref
+          .read(billServiceProvider)
+          .addItem(
             billId: billId,
             name: name,
             quantity: quantity,
@@ -269,10 +311,9 @@ class BillItemsNotifier extends AsyncNotifier<List<BillItem>> {
     state = AsyncData([...current, ...tempItems]);
 
     try {
-      final confirmed = await ref.read(billServiceProvider).addItemsBulk(
-            billId: billId,
-            items: items,
-          );
+      final confirmed = await ref
+          .read(billServiceProvider)
+          .addItemsBulk(billId: billId, items: items);
       final confirmedItems = confirmed.map(BillItem.fromJson).toList();
       final updated = List<BillItem>.from(state.value ?? []);
       for (var i = 0; i < tempIds.length && i < confirmedItems.length; i++) {
@@ -282,9 +323,7 @@ class BillItemsNotifier extends AsyncNotifier<List<BillItem>> {
       state = AsyncData(updated);
     } catch (_) {
       state = AsyncData(
-        (state.value ?? [])
-            .where((i) => !tempIds.contains(i.id))
-            .toList(),
+        (state.value ?? []).where((i) => !tempIds.contains(i.id)).toList(),
       );
       rethrow;
     }
@@ -308,7 +347,44 @@ class BillItemsNotifier extends AsyncNotifier<List<BillItem>> {
   }
 }
 
-final billItemsProvider = AsyncNotifierProvider.family.autoDispose<
-    BillItemsNotifier, List<BillItem>, String>(
-  (billId) => BillItemsNotifier(billId),
+final billItemsProvider = AsyncNotifierProvider.family
+    .autoDispose<BillItemsNotifier, List<BillItem>, String>(
+      (billId) => BillItemsNotifier(billId),
+    );
+
+// ── OCR state + notifier ──────────────────────────────────────────────────────
+
+enum OcrScanStatus { idle, scanning, done, error }
+
+class OcrState {
+  final OcrScanStatus status;
+  final List<Map<String, dynamic>> items;
+  final String? error;
+
+  const OcrState({
+    this.status = OcrScanStatus.idle,
+    this.items = const [],
+    this.error,
+  });
+}
+
+class OcrNotifier extends Notifier<OcrState> {
+  @override
+  OcrState build() => const OcrState();
+
+  Future<void> scan(String billId, Uint8List imageBytes) async {
+    state = const OcrState(status: OcrScanStatus.scanning);
+    try {
+      final parsed = await ref
+          .read(billServiceProvider)
+          .runOcr(billId: billId, imageBytes: imageBytes);
+      state = OcrState(status: OcrScanStatus.done, items: parsed);
+    } catch (e) {
+      state = OcrState(status: OcrScanStatus.error, error: 'Scan failed: $e');
+    }
+  }
+}
+
+final ocrProvider = NotifierProvider.autoDispose<OcrNotifier, OcrState>(
+  OcrNotifier.new,
 );
