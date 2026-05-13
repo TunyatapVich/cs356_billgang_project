@@ -85,15 +85,15 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
       final service = ref.read(billServiceProvider);
       final paymentService = ref.read(paymentServiceProvider);
       
-      final results = await Future.wait<Map<String, dynamic>>([
+      final results = await Future.wait<dynamic>([
         service.getBill(widget.billId),
         service.getDebts(widget.billId),
         paymentService.listByBill(widget.billId),
       ]);
 
-      final billData = results[0];
-      final debtsData = results[1];
-      final paymentsData = results[2];
+      final billData = results[0] as Map<String, dynamic>;
+      final debtsData = results[1] as Map<String, dynamic>;
+      final paymentsData = results[2] as Map<String, dynamic>;
 
       final bill = Bill.fromJson(billData['bill'] as Map<String, dynamic>);
       final rawItems = (billData['items'] as List<dynamic>?) ?? [];
@@ -109,10 +109,8 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           (debtsData['per_person'] as List<dynamic>?)
               ?.cast<Map<String, dynamic>>() ??
           [];
-      final payments = 
-          (paymentsData['payments'] as List<dynamic>?)
-              ?.cast<Map<String, dynamic>>() ??
-          [];
+      final payments = ((paymentsData['payments'] as List<dynamic>?) ?? [])
+          .cast<Map<String, dynamic>>();
 
       if (!mounted) return;
       setState(() {

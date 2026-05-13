@@ -657,11 +657,14 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
         _slipUploaded = true;
       });
 
-      _showSnackBar(
-        billSettled
-            ? '✅ บิลนี้ชำระครบแล้ว ทุกคนจ่ายครบแล้ว!'
-            : 'ยืนยันสลิปเรียบร้อยแล้ว',
-      );
+      if (billSettled) {
+        _showSnackBar('✅ บิลนี้ชำระครบแล้ว ทุกคนจ่ายครบแล้ว!');
+      } else {
+        _showSnackBar('ยืนยันสลิปเรียบร้อยแล้ว');
+      }
+
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) context.go('/bill/${widget.billId}/summary');
     } catch (e) {
       if (!mounted) return;
       setState(() => _uploadingSlip = false);
