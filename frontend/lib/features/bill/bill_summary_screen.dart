@@ -506,12 +506,14 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
               final isMe = p['user_id'] == currentUserId;
               final assignedItemIds =
                   (p['item_ids'] as List<dynamic>?)?.cast<String>() ?? [];
+              final payerId = _bill?.paidBy ?? _bill?.createdBy ?? '';
+              final isPayer = p['user_id'] == payerId;
 
               final payment = _payments
                   .where((pmt) => pmt['from_user_id'] == p['user_id'])
                   .firstOrNull;
               final hasPaid =
-                  payment != null && payment['status'] == 'confirmed';
+                  isPayer || (payment != null && payment['status'] == 'confirmed');
               final slipUrl = payment?['slip_url'] as String?;
 
               return Padding(
@@ -615,6 +617,24 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                                     ],
                                   ],
                                 ),
+                              ] else if (owed > 0) ...[
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.textGray.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Pending',
+                                    style: TextStyle(
+                                      color: AppColors.textGray,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ],
                           ),
@@ -717,6 +737,32 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     );
   }
 
+  bool get _allMembersPaid {
+    if (_perPerson.isEmpty) return false;
+    return _perPerson.every((p) {
+      final userId = p['user_id'] as String?;
+      if (userId == null) return false;
+      return _payments.any(
+        (pmt) =>
+            pmt['from_user_id'] == userId && pmt['status'] == 'confirmed',
+      );
+    });
+  }
+
+  Future<void> _settleBill() async {
+    try {
+      final service = ref.read(billServiceProvider);
+      await service.settleBill(widget.billId);
+      await _loadBill();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to close bill: $e')),
+        );
+      }
+    }
+  }
+
   Widget _buildPayButton() {
     final bill = _bill!;
     final isSettled = !bill.isActive;
@@ -761,7 +807,31 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     final isCurrentUserPayer = payerId == currentUserId;
     final myOwed = _myOwedAmount;
     final hasPaid = _hasCurrentUserPaid;
+    final allPaid = _allMembersPaid;
     final canPay = payerId.isNotEmpty && !isCurrentUserPayer && myOwed > 0 && !hasPaid;
+
+    // Payer sees "ปิดบิล" when everyone has paid
+    if (isCurrentUserPayer && allPaid && !isSettled) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.successGreen,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          onPressed: _settleBill,
+          child: const Text(
+            'ปิดบิล',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        ),
+      );
+    }
 
     String label;
     if (hasPaid) {

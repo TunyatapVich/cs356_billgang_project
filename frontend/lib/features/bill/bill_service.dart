@@ -46,6 +46,10 @@ class BillService {
     await _dio.delete('/bills/$billId');
   }
 
+  Future<void> settleBill(String billId) async {
+    await _dio.post('/bills/$billId/settle');
+  }
+
   // ── Items ──────────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> addItem({
