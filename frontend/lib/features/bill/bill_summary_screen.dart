@@ -120,10 +120,9 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   }
 
   String get _payerName {
-    if (_bill?.paidBy == null) return 'User';
-    final member = _members
-        .where((m) => m['user_id'] == _bill!.paidBy)
-        .firstOrNull;
+    final payerId = _bill?.paidBy ?? _bill?.createdBy;
+    if (payerId == null || payerId.isEmpty) return 'User';
+    final member = _members.where((m) => m['user_id'] == payerId).firstOrNull;
     final user = member?['user'] as Map<String, dynamic>?;
     return (user?['display_name'] ?? user?['email'] ?? 'User') as String;
   }
@@ -643,14 +642,14 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
     }
 
     // ── Active bill — normal pay logic ─────────────────────────────────────
-    final payerId = bill.paidBy;
+    final payerId = bill.paidBy ?? bill.createdBy;
     final currentUserId = ref.read(authProvider).value?.id;
-    final isCurrentUserPayer = payerId != null && payerId == currentUserId;
+    final isCurrentUserPayer = payerId == currentUserId;
     final myOwed = _myOwedAmount;
-    final canPay = payerId != null && !isCurrentUserPayer && myOwed > 0;
+    final canPay = payerId.isNotEmpty && !isCurrentUserPayer && myOwed > 0;
 
     String label;
-    if (payerId == null) {
+    if (payerId.isEmpty) {
       label = 'No Payer Set';
     } else if (isCurrentUserPayer) {
       label = 'You paid this bill';
