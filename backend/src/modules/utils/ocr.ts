@@ -4,8 +4,8 @@ export type ParsedItem = {
   unit_price: number;
 };
 
-const PROMPT = (rawText: string) => `You are a Thai receipt parser.
-Extract every food/drink line item from the receipt below and return ONLY valid JSON in this shape:
+const PROMPT = `You are a Thai receipt parser. Look at this receipt image carefully.
+Extract every food/drink/product line item and return ONLY valid JSON in this shape:
 {"items":[{"name": string, "quantity": number, "unit_price": number}, ...]}
 
 Rules:
@@ -15,12 +15,13 @@ Rules:
 - unit_price: price per single unit, NOT line total. If only line total is shown, divide by quantity.
 - For table receipts with columns like QTY, ITEM, PRICE, AMOUNT, each table row is one item.
 - Skip subtotals, service charge, VAT, totals, change, cash, payment lines.
-- If you can't parse anything, return {"items":[]}.
+- If you can't parse anything, return {"items":[]}.`;
 
-Receipt:
-"""
-${rawText}
-"""`;
+const normalizeItem = (item: ParsedItem): ParsedItem => ({
+  name: String(item.name ?? "").trim(),
+  quantity: Math.max(1, Math.floor(Number(item.quantity) || 1)),
+  unit_price: Math.max(0, Number(item.unit_price) || 0),
+});
 
 const VISION_PROMPT = (
   rawText: string,
@@ -133,7 +134,7 @@ const callLlama = async (rawText: string): Promise<ParsedItem[]> => {
   }
 
   const body = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
   };
   const content = body.choices?.[0]?.message?.content;
   if (!content) throw new Error("Groq empty response");

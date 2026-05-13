@@ -640,6 +640,11 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
   Future<void> _confirmSlip() async {
     if (_slipBytes == null || _uploadingSlip) return;
 
+    if (_paymentId == null) {
+      _showSnackBar('Payment not initialized — go back and try again.');
+      return;
+    }
+
     setState(() => _uploadingSlip = true);
 
     try {

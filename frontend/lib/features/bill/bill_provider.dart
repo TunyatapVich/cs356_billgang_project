@@ -1,6 +1,5 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'bill_service.dart';
 
 // ── Bill model ────────────────────────────────────────────────────────────────
@@ -373,9 +372,8 @@ class OcrNotifier extends Notifier<OcrState> {
   @override
   OcrState build() => const OcrState();
 
-  Future<void> scan(String billId, File imageFile) async {
+  Future<void> scan(String billId, Uint8List imageBytes) async {
     state = const OcrState(status: OcrScanStatus.scanning);
-    final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
       final recognised = await recognizer.processImage(
         InputImage.fromFile(imageFile),
@@ -409,8 +407,6 @@ class OcrNotifier extends Notifier<OcrState> {
       state = OcrState(status: OcrScanStatus.done, items: parsed);
     } catch (e) {
       state = OcrState(status: OcrScanStatus.error, error: 'Scan failed: $e');
-    } finally {
-      await recognizer.close();
     }
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
@@ -20,8 +21,7 @@ class BillService {
         'name': name,
         'date': date.toIso8601String(),
         'vat_pct': vatPercent,
-        if (serviceChargePercent != null)
-          'service_charge_pct': serviceChargePercent,
+        'service_charge_pct': ?serviceChargePercent,
       },
     );
     return response.data as Map<String, dynamic>;
@@ -84,9 +84,9 @@ class BillService {
     final response = await _dio.put(
       '/bills/$billId/items/$itemId',
       data: {
-        if (name != null) 'name': name,
-        if (quantity != null) 'quantity': quantity,
-        if (unitPrice != null) 'unit_price': unitPrice,
+        'name': ?name,
+        'quantity': ?quantity,
+        'unit_price': ?unitPrice,
       },
     );
     return (response.data as Map<String, dynamic>)['item'] as Map<String, dynamic>;

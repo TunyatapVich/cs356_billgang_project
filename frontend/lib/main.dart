@@ -12,6 +12,10 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
-    return MaterialApp.router(title: 'BillGang', routerConfig: router);
+    return MaterialApp.router(
+      title: 'BillGang',
+      debugShowCheckedModeBanner: false,
+      routerConfig: router,
+    );
   }
 }

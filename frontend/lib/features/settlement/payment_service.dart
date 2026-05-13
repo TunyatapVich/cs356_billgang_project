@@ -8,7 +8,7 @@ class PaymentService {
   const PaymentService(this._dio);
 
   Future<Map<String, dynamic>> listByBill(String billId) async {
-    final response = await _dio.get('/bills/$billId/payments');
+    final response = await _dio.get('/payments', queryParameters: {'bill_id': billId});
     return response.data as Map<String, dynamic>;
   }
 

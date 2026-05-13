@@ -6,6 +6,7 @@ import '../../core/socket/socket_client.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
+import '../settlement/payment_service.dart';
 import 'bill_provider.dart';
 import 'bill_service.dart';
 
@@ -25,6 +26,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
   List<BillItem> _items = [];
   List<Map<String, dynamic>> _members = [];
   List<Map<String, dynamic>> _perPerson = [];
+  List<Map<String, dynamic>> _payments = [];
   bool _loading = true;
   Object? _error;
 
@@ -59,13 +61,15 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
         });
       }
     } else if (type == 'payment_confirmed') {
-      // Backend broadcasts bill_settled: true when all payments are confirmed
       final billSettled = event['bill_settled'] as bool? ?? false;
       if (billSettled && mounted) {
         setState(() {
           _bill = _bill?.copyWith(status: 'settled');
         });
       }
+      _loadBill();
+    } else if (type == 'payment_created') {
+      _loadBill();
     } else if (type == 'bill_updated') {
       _loadBill();
     }
@@ -79,13 +83,17 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
 
     try {
       final service = ref.read(billServiceProvider);
+      final paymentService = ref.read(paymentServiceProvider);
+      
       final results = await Future.wait<Map<String, dynamic>>([
         service.getBill(widget.billId),
         service.getDebts(widget.billId),
+        paymentService.listByBill(widget.billId),
       ]);
 
       final billData = results[0];
       final debtsData = results[1];
+      final paymentsData = results[2];
 
       final bill = Bill.fromJson(billData['bill'] as Map<String, dynamic>);
       final rawItems = (billData['items'] as List<dynamic>?) ?? [];
@@ -101,6 +109,10 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
           (debtsData['per_person'] as List<dynamic>?)
               ?.cast<Map<String, dynamic>>() ??
           [];
+      final payments = 
+          (paymentsData['payments'] as List<dynamic>?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
 
       if (!mounted) return;
       setState(() {
@@ -108,6 +120,7 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
         _items = items;
         _members = members;
         _perPerson = perPerson;
+        _payments = payments;
         _loading = false;
       });
     } catch (e) {
@@ -493,6 +506,14 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
               final avatarUrl = user['avatar_url'] as String?;
               final owed = (p['owed'] as num?)?.toDouble() ?? 0.0;
               final isMe = p['user_id'] == currentUserId;
+
+              final payment = _payments
+                  .where((pmt) => pmt['from_user_id'] == p['user_id'])
+                  .firstOrNull;
+              final hasPaid =
+                  payment != null && payment['status'] == 'confirmed';
+              final slipUrl = payment?['slip_url'] as String?;
+
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
@@ -544,15 +565,55 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        isMe ? '$displayName (You)' : displayName,
-                        style: TextStyle(
-                          color: AppColors.textDark,
-                          fontSize: 14,
-                          fontWeight: isMe
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isMe ? '$displayName (You)' : displayName,
+                            style: TextStyle(
+                              color: AppColors.textDark,
+                              fontSize: 14,
+                              fontWeight: isMe
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          if (hasPaid) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.successGreen
+                                        .withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Paid',
+                                    style: TextStyle(
+                                      color: AppColors.successGreen,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                if (slipUrl != null) ...[
+                                  const SizedBox(width: 6),
+                                  GestureDetector(
+                                    onTap: () => _showReceiptDialog(slipUrl),
+                                    child: const Icon(
+                                      Icons.receipt_long,
+                                      size: 14,
+                                      color: AppColors.primaryBlue,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     Text(
@@ -679,6 +740,50 @@ class _BillSummaryScreenState extends ConsumerState<BillSummaryScreen> {
         child: Text(
           label,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ),
+    );
+  }
+
+  void _showReceiptDialog(String slipUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                slipUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) => Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text('Failed to load image', style: TextStyle(color: AppColors.errorRed)),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
         ),
       ),
     );

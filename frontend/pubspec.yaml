@@ -48,9 +48,6 @@ dependencies:
   # WebSocket (real-time assign)
   web_socket_channel: ^3.0.1
 
-  # OCR (on-device)
-  google_mlkit_text_recognition: ^0.15.1
-
   # QR code (PromptPay)
   qr_flutter: ^4.1.0
 

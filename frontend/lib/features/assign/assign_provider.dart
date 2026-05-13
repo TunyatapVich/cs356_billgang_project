@@ -298,8 +298,9 @@ class AssignNotifier extends Notifier<AssignState> {
   void _applyAssign(String itemId, String userId) {
     final item = state.items.where((i) => i.id == itemId).firstOrNull;
     if (item == null) return;
-    if (item.assignedTo?.contains(userId) ?? false)
+    if (item.assignedTo?.contains(userId) ?? false) {
       return; // already present, no-op
+    }
     state = state.copyWith(
       items: [
         for (final i in state.items)
@@ -314,8 +315,9 @@ class AssignNotifier extends Notifier<AssignState> {
   void _applyUnassign(String itemId, String userId) {
     final item = state.items.where((i) => i.id == itemId).firstOrNull;
     if (item == null) return;
-    if (!(item.assignedTo?.contains(userId) ?? false))
+    if (!(item.assignedTo?.contains(userId) ?? false)) {
       return; // already absent, no-op
+    }
     state = state.copyWith(
       items: [
         for (final i in state.items)

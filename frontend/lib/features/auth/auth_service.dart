@@ -42,9 +42,9 @@ class AuthService {
     String? promptpayNumber,
   }) async {
     final formData = FormData.fromMap({
-      if (displayName != null) 'display_name': displayName,
-      if (avatarUrl != null) 'avatar_url': avatarUrl,
-      if (promptpayNumber != null) 'promptpay_number': promptpayNumber,
+      'display_name': ?displayName,
+      'avatar_url': ?avatarUrl,
+      'promptpay_number': ?promptpayNumber,
       if (avatarBytes != null)
         'avatar_file': MultipartFile.fromBytes(
           avatarBytes,
