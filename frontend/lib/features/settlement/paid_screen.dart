@@ -10,6 +10,7 @@ import 'package:thaiqr/thaiqr.dart';
 import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import 'payment_service.dart';
+import 'promptpay_utils.dart';
 
 class PaidScreen extends ConsumerStatefulWidget {
   const PaidScreen({
@@ -220,20 +221,13 @@ class _PaidScreenState extends ConsumerState<PaidScreen> {
       return _buildNoPromptpay();
     }
 
-    final generator = ThaiQRGenerator();
-    String cleanPromptPay = _promptpayNumber!.replaceAll(RegExp(r'[^0-9]'), '');
-    if (cleanPromptPay.startsWith('0') && cleanPromptPay.length == 10) {
-      cleanPromptPay = '0066${cleanPromptPay.substring(1)}';
-    }
-
     final amountDouble =
         double.tryParse(widget.rawAmount ?? widget.amount.toStringAsFixed(2)) ??
         widget.amount.toDouble();
-    final amountString = amountDouble.toStringAsFixed(2);
 
-    final qrPayload = generator.generateCodeFromMobileOrId(
-      cleanPromptPay,
-      amountString,
+    final qrPayload = PromptPayUtils.generatePayload(
+      promptpayId: _promptpayNumber!,
+      amount: amountDouble,
     );
 
     return Column(
