@@ -20,8 +20,7 @@ class BillService {
         'name': name,
         'date': date.toIso8601String(),
         'vat_pct': vatPercent,
-        if (serviceChargePercent != null)
-          'service_charge_pct': serviceChargePercent,
+        'service_charge_pct': ?serviceChargePercent,
       },
     );
     return response.data as Map<String, dynamic>;
@@ -84,9 +83,9 @@ class BillService {
     final response = await _dio.put(
       '/bills/$billId/items/$itemId',
       data: {
-        if (name != null) 'name': name,
-        if (quantity != null) 'quantity': quantity,
-        if (unitPrice != null) 'unit_price': unitPrice,
+        'name': ?name,
+        'quantity': ?quantity,
+        'unit_price': ?unitPrice,
       },
     );
     return (response.data as Map<String, dynamic>)['item'] as Map<String, dynamic>;
@@ -131,7 +130,7 @@ class BillService {
       '/bills/$billId/ocr',
       data: {
         'raw_text': rawText,
-        if (imageUrl != null) 'image_url': imageUrl,
+        'image_url': ?imageUrl,
       },
     );
     final data = response.data as Map<String, dynamic>;

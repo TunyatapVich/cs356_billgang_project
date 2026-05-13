@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
-import 'package:thaiqr/thaiqr.dart';
 import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import 'payment_service.dart';

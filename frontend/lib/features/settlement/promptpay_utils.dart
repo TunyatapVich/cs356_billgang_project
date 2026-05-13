@@ -1,4 +1,3 @@
-import 'dart:convert';
 
 class PromptPayUtils {
   static String generatePayload({
@@ -43,7 +42,7 @@ class PromptPayUtils {
     final tag54 = '54${amountStr.length.toString().padLeft(2, '0')}$amountStr';
     final tag58 = '5802TH';
 
-    final payloadWithoutCrc = '$tag00$tag01$tag29$tag53$tag54$tag58' + '6304';
+    final payloadWithoutCrc = '$tag00$tag01$tag29$tag53$tag54$tag58' '6304';
     final crc = _crc16(payloadWithoutCrc);
 
     return '$payloadWithoutCrc$crc';
