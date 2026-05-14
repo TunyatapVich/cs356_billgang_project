@@ -17,11 +17,9 @@ class _EditableItem {
     required String nameVal,
     required int quantityVal,
     required double unitPriceVal,
-  })  : name = TextEditingController(text: nameVal),
-        quantity = TextEditingController(text: quantityVal.toString()),
-        unitPrice = TextEditingController(
-          text: unitPriceVal.toStringAsFixed(2),
-        );
+  }) : name = TextEditingController(text: nameVal),
+       quantity = TextEditingController(text: quantityVal.toString()),
+       unitPrice = TextEditingController(text: unitPriceVal.toStringAsFixed(2));
 
   void dispose() {
     name.dispose();
@@ -30,10 +28,10 @@ class _EditableItem {
   }
 
   Map<String, dynamic> toJson() => {
-        'name': name.text.trim(),
-        'quantity': int.tryParse(quantity.text.trim()) ?? 1,
-        'unit_price': double.tryParse(unitPrice.text.trim()) ?? 0.0,
-      };
+    'name': name.text.trim(),
+    'quantity': int.tryParse(quantity.text.trim()) ?? 1,
+    'unit_price': double.tryParse(unitPrice.text.trim()) ?? 0.0,
+  };
 }
 
 class OcrReviewScreen extends ConsumerStatefulWidget {
@@ -54,17 +52,20 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
 
   @override
   void dispose() {
+    _clearEditableItems();
+    super.dispose();
+  }
+
+  void _clearEditableItems() {
     for (final item in _editableItems) {
       item.dispose();
     }
-    super.dispose();
+    _editableItems = [];
   }
 
   // Sync editable rows from freshly parsed provider items.
   void _syncEditableItems(List<Map<String, dynamic>> parsed) {
-    for (final item in _editableItems) {
-      item.dispose();
-    }
+    _clearEditableItems();
     _editableItems = parsed
         .map(
           (json) => _EditableItem(
@@ -80,15 +81,18 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
     try {
       final picked = await _picker.pickImage(source: source, imageQuality: 85);
       if (picked == null) return;
-      final imageBytes = await picked.readAsBytes();
+      final imageFile = File(picked.path);
       if (!mounted) return;
-      setState(() => _pickedImage = File(picked.path));
-      await ref.read(ocrProvider.notifier).scan(widget.billId, imageBytes);
+      setState(() {
+        _pickedImage = imageFile;
+        _clearEditableItems();
+      });
+      await ref.read(ocrProvider.notifier).scan(widget.billId, imageFile);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open image: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open image: $e')));
     }
   }
 
@@ -102,9 +106,11 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
 
     final validItems = _editableItems
         .map((i) => i.toJson())
-        .where((j) =>
-            (j['name'] as String).isNotEmpty &&
-            (j['unit_price'] as double) > 0)
+        .where(
+          (j) =>
+              (j['name'] as String).isNotEmpty &&
+              (j['unit_price'] as double) > 0,
+        )
         .toList();
 
     if (validItems.isEmpty) return;
@@ -117,9 +123,9 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
       if (mounted) context.go('/bill/${widget.billId}/items');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
         setState(() => _saving = false);
       }
     }
@@ -139,6 +145,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
 
     final isScanning = ocrState.status == OcrScanStatus.scanning;
     final isDone = ocrState.status == OcrScanStatus.done;
+    final canAddManualRow = isDone || ocrState.status == OcrScanStatus.error;
     final hasItems = _editableItems.isNotEmpty;
 
     return Scaffold(
@@ -183,7 +190,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                     const SizedBox(height: 12),
                     ..._buildItemRows(),
                   ],
-                  if (isDone) _buildAddManualRow(),
+                  if (canAddManualRow) _buildAddManualRow(),
                 ],
               ),
             ),
@@ -240,8 +247,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                     SizedBox(height: 3),
                     Text(
                       'ML Kit reads text on-device, then our AI structures it.',
-                      style:
-                          TextStyle(color: AppColors.textGray, fontSize: 12),
+                      style: TextStyle(color: AppColors.textGray, fontSize: 12),
                     ),
                   ],
                 ),
@@ -280,7 +286,9 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                         Text(
                           'Reading receipt…',
                           style: TextStyle(
-                              color: AppColors.textGray, fontSize: 13),
+                            color: AppColors.textGray,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -327,9 +335,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
       ),
       style: OutlinedButton.styleFrom(
         side: const BorderSide(color: AppColors.primaryBlue),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         padding: const EdgeInsets.symmetric(vertical: 10),
       ),
     );
@@ -373,10 +379,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
         ),
         child: Row(
           children: [
-            Expanded(
-              flex: 4,
-              child: _editCell(item.name, hint: 'Item name'),
-            ),
+            Expanded(flex: 4, child: _editCell(item.name, hint: 'Item name')),
             const SizedBox(width: 8),
             Expanded(
               flex: 2,
@@ -393,12 +396,11 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
               child: _editCell(
                 item.unitPrice,
                 hint: 'Price',
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(
-                    RegExp(r'^\d*\.?\d{0,2}'),
-                  ),
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                 ],
               ),
             ),
@@ -437,11 +439,12 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
         style: const TextStyle(fontSize: 13, color: AppColors.textDark),
         decoration: InputDecoration(
           border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 8,
+          ),
           hintText: hint,
-          hintStyle:
-              const TextStyle(color: AppColors.textGray, fontSize: 12),
+          hintStyle: const TextStyle(color: AppColors.textGray, fontSize: 12),
         ),
       ),
     );
@@ -482,7 +485,11 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
       ),
       child: const Column(
         children: [
-          Icon(Icons.receipt_long_outlined, color: AppColors.textGray, size: 36),
+          Icon(
+            Icons.receipt_long_outlined,
+            color: AppColors.textGray,
+            size: 36,
+          ),
           SizedBox(height: 10),
           Text(
             'No items detected',
@@ -516,7 +523,9 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
       label: const Text(
         'Add row',
         style: TextStyle(
-            color: AppColors.primaryBlue, fontWeight: FontWeight.w600),
+          color: AppColors.primaryBlue,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
