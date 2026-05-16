@@ -85,7 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'BillGang boo',
+                  'BillGang',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textDark,
@@ -110,7 +110,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   errorText: _passwordError,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                       color: AppColors.textGray,
                       size: 20,
                     ),
