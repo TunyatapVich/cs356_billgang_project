@@ -1,5 +1,8 @@
-import 'dart:typed_data';
+import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'bill_service.dart';
 
 // ── Bill model ────────────────────────────────────────────────────────────────
@@ -360,11 +363,13 @@ class OcrState {
   final OcrScanStatus status;
   final List<Map<String, dynamic>> items;
   final String? error;
+  final String rawText;
 
   const OcrState({
     this.status = OcrScanStatus.idle,
     this.items = const [],
     this.error,
+    this.rawText = '',
   });
 }
 
@@ -372,43 +377,121 @@ class OcrNotifier extends Notifier<OcrState> {
   @override
   OcrState build() => const OcrState();
 
-  Future<void> scan(String billId, Uint8List imageBytes) async {
+  Future<void> scan(String billId, File imageFile) async {
     state = const OcrState(status: OcrScanStatus.scanning);
+    var rawText = '';
     try {
-      final recognised = await recognizer.processImage(
-        InputImage.fromFile(imageFile),
-      );
-      final rawText = recognised.text;
-
-      if (rawText.trim().isEmpty) {
-        state = const OcrState(
-          status: OcrScanStatus.error,
-          error: 'No text detected. Try a clearer image.',
-        );
-        return;
-      }
-
       final imageBytes = await imageFile.readAsBytes();
-      final ext = imageFile.path.toLowerCase();
-      final mimeType = ext.endsWith('.png')
-          ? 'image/png'
-          : ext.endsWith('.webp')
-          ? 'image/webp'
-          : 'image/jpeg';
+      rawText = await _readReceiptText(imageFile);
       final parsed = await ref
           .read(billServiceProvider)
           .runOcr(
             billId: billId,
             rawText: rawText,
             imageBytes: imageBytes,
-            imageMimeType: mimeType,
+            imageMimeType: _detectImageMimeType(imageFile, imageBytes),
           );
 
-      state = OcrState(status: OcrScanStatus.done, items: parsed);
+      if (parsed.isEmpty && rawText.trim().isEmpty) {
+        state = const OcrState(
+          status: OcrScanStatus.error,
+          error:
+              'No text was detected from this image, and the backend AI parser returned no items.',
+        );
+        return;
+      }
+
+      state = OcrState(
+        status: OcrScanStatus.done,
+        items: parsed,
+        rawText: rawText,
+      );
     } catch (e) {
-      state = OcrState(status: OcrScanStatus.error, error: 'Scan failed: $e');
+      state = OcrState(
+        status: OcrScanStatus.error,
+        error: 'Scan failed: ${_formatScanError(e)}',
+        rawText: rawText,
+      );
     }
   }
+}
+
+String _formatScanError(Object error) {
+  if (error is DioException) {
+    final body = error.response?.data;
+    if (body is Map) {
+      final message = body['message'] ?? body['error'];
+      if (message != null) return _cleanErrorMessage(message.toString());
+    }
+    if (body is String && body.trim().isNotEmpty) {
+      return _cleanErrorMessage(body);
+    }
+    if (error.error != null) {
+      return _cleanErrorMessage(error.error.toString());
+    }
+    if (error.message != null && error.message!.trim().isNotEmpty) {
+      return _cleanErrorMessage(error.message!);
+    }
+  }
+
+  return _cleanErrorMessage(error.toString());
+}
+
+String _cleanErrorMessage(String message) {
+  var cleaned = message.trim();
+  cleaned = cleaned.replaceFirst(RegExp(r'^DioException \[[^\]]+\]:\s*'), '');
+  cleaned = cleaned.replaceFirst(RegExp(r'^null\s*Error:\s*'), '');
+  cleaned = cleaned.replaceFirst(RegExp(r'^Error:\s*'), '');
+  cleaned = cleaned.replaceFirst(RegExp(r'^Exception:\s*'), '');
+  return cleaned.isEmpty
+      ? 'Unable to scan receipt. Please try again.'
+      : cleaned;
+}
+
+Future<String> _readReceiptText(File imageFile) async {
+  final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
+  try {
+    final recognised = await recognizer.processImage(
+      InputImage.fromFile(imageFile),
+    );
+    return recognised.text;
+  } on MissingPluginException {
+    return '';
+  } finally {
+    try {
+      await recognizer.close();
+    } on MissingPluginException {
+      // ignore
+    }
+  }
+}
+
+String _detectImageMimeType(File imageFile, Uint8List bytes) {
+  final path = imageFile.path.toLowerCase();
+  if (path.endsWith('.png')) return 'image/png';
+  if (path.endsWith('.webp')) return 'image/webp';
+
+  if (bytes.length >= 8 &&
+      bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4E &&
+      bytes[3] == 0x47) {
+    return 'image/png';
+  }
+
+  if (bytes.length >= 12 &&
+      bytes[0] == 0x52 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46 &&
+      bytes[3] == 0x46 &&
+      bytes[8] == 0x57 &&
+      bytes[9] == 0x45 &&
+      bytes[10] == 0x42 &&
+      bytes[11] == 0x50) {
+    return 'image/webp';
+  }
+
+  return 'image/jpeg';
 }
 
 final ocrProvider = NotifierProvider.autoDispose<OcrNotifier, OcrState>(

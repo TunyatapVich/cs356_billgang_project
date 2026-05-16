@@ -1,7 +1,7 @@
 import { prisma } from "../../db";
 import { decimalToNumber } from "../utils/decimal";
 import { minCashFlow, type Transfer } from "../utils/mincashflow";
-import { parseReceiptImage, type ParsedItem } from "../utils/ocr";
+import { parseReceiptText, type ParsedItem } from "../utils/ocr";
 import { broadcast } from "../utils/broker";
 import { UserStatsService } from "../users/service";
 import type {
