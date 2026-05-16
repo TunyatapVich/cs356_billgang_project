@@ -282,12 +282,14 @@ class BillItemsNotifier extends AsyncNotifier<List<BillItem>> {
             quantity: quantity,
             unitPrice: unitPrice,
           );
+      if (!ref.mounted) return;
       final confirmed = BillItem.fromJson(json);
       final updated = (state.value ?? [])
           .map((i) => i.id == tempId ? confirmed : i)
           .toList();
       state = AsyncData(updated);
     } catch (_) {
+      if (!ref.mounted) return;
       // rollback
       state = AsyncData(
         (state.value ?? []).where((i) => i.id != tempId).toList(),
@@ -317,6 +319,7 @@ class BillItemsNotifier extends AsyncNotifier<List<BillItem>> {
       final confirmed = await ref
           .read(billServiceProvider)
           .addItemsBulk(billId: billId, items: items);
+      if (!ref.mounted) return;
       final confirmedItems = confirmed.map(BillItem.fromJson).toList();
       final updated = List<BillItem>.from(state.value ?? []);
       for (var i = 0; i < tempIds.length && i < confirmedItems.length; i++) {
@@ -325,6 +328,7 @@ class BillItemsNotifier extends AsyncNotifier<List<BillItem>> {
       }
       state = AsyncData(updated);
     } catch (_) {
+      if (!ref.mounted) return;
       state = AsyncData(
         (state.value ?? []).where((i) => !tempIds.contains(i.id)).toList(),
       );
@@ -343,6 +347,7 @@ class BillItemsNotifier extends AsyncNotifier<List<BillItem>> {
           .read(billServiceProvider)
           .deleteItem(billId: billId, itemId: itemId);
     } catch (_) {
+      if (!ref.mounted) return;
       // rollback
       state = AsyncData(before);
       rethrow;

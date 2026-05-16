@@ -318,7 +318,6 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
   }
 
   Widget _qtyStepper() {
-    final qty = int.tryParse(_qtyController.text) ?? 1;
     return Container(
       height: 46,
       decoration: BoxDecoration(
@@ -331,8 +330,9 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
           _stepperBtn(
             icon: Icons.remove,
             onTap: () {
-              if (qty > 1) {
-                _qtyController.text = (qty - 1).toString();
+              final current = int.tryParse(_qtyController.text) ?? 1;
+              if (current > 1) {
+                setState(() => _qtyController.text = (current - 1).toString());
               }
             },
           ),
@@ -356,7 +356,8 @@ class _AddItemsScreenState extends ConsumerState<AddItemsScreen> {
           _stepperBtn(
             icon: Icons.add,
             onTap: () {
-              _qtyController.text = (qty + 1).toString();
+              final current = int.tryParse(_qtyController.text) ?? 1;
+              setState(() => _qtyController.text = (current + 1).toString());
             },
           ),
         ],
