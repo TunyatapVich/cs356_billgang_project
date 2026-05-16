@@ -1,8 +1,10 @@
+import "dotenv/config";
 import { Elysia } from "elysia";
 import { openapi } from "@elysiajs/openapi";
 import { AuthModule } from "./modules/auth";
 import { BillModule } from "./modules/bills";
 import { PaymentModule } from "./modules/payments";
+import { UsersModule } from "./modules/users";
 import { WsModule } from "./modules/ws";
 
 const app = new Elysia()
@@ -23,6 +25,7 @@ const app = new Elysia()
   .use(AuthModule)
   .use(BillModule)
   .use(PaymentModule)
+  .use(UsersModule)
   .use(WsModule)
   .get("/", () => "Hello Elysia - API docs at /docs")
   .listen(3000);

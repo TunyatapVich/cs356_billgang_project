@@ -24,6 +24,7 @@ const AuthResponse = t.Object({
 const ProfileUpdatePayload = t.Object({
   display_name: t.Optional(__nullable__(t.String())),
   avatar_url: t.Optional(__nullable__(t.String())),
+  avatar_file: t.Optional(t.File()),
   promptpay_number: t.Optional(__nullable__(t.String())),
 });
 

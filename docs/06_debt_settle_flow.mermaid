@@ -31,6 +31,8 @@ sequenceDiagram
 
     Note over UI,DB: ── Confirm payment ──
 
+    UI->>UI: upload slip to Cloudinary (Unsigned Preset)
+    UI-->>UI: slip_url
     UI->>API: PUT /payments/:id/confirm {slip_url}
     API->>DB: UPDATE payments SET status='confirmed', slip_url
     DB-->>API: updated payment

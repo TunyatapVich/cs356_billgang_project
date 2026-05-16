@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import {
   BillCreatePayload,
   BillIdParams,
@@ -9,6 +9,7 @@ import {
   BillModel,
   BillOcrPayload,
   BillPatchPayload,
+  BillPayerPayload,
 } from "./model";
 import { BillService } from "./service";
 import { authPlugin } from "../utils/auth";
@@ -168,6 +169,40 @@ export const BillModule = new Elysia({ prefix: "/bills" })
   )
 
   .post(
+    "/:id/items/:itemId/assign",
+    async ({ params, body, userid, set }) => {
+      if (!userid) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+      try {
+        await BillService.assignItem(userid, params.id, params.itemId, body.user_id);
+        return { message: "Assigned" };
+      } catch (err: any) {
+        return handleError(err, set);
+      }
+    },
+    { params: BillItemIdParams, body: t.Object({ user_id: t.String() }) },
+  )
+
+  .delete(
+    "/:id/items/:itemId/assign/:assignUserId",
+    async ({ params, userid, set }) => {
+      if (!userid) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+      try {
+        await BillService.unassignItem(userid, params.id, params.itemId, params.assignUserId);
+        return { message: "Unassigned" };
+      } catch (err: any) {
+        return handleError(err, set);
+      }
+    },
+    { params: t.Object({ id: t.String(), itemId: t.String(), assignUserId: t.String() }) },
+  )
+
+  .post(
     "/:id/ocr",
     async ({ params, body, userid, set }) => {
       if (!userid) {
@@ -175,7 +210,17 @@ export const BillModule = new Elysia({ prefix: "/bills" })
         return { message: "Unauthorized" };
       }
       try {
-        return await BillService.runOcr(userid, params.id, body.raw_text, body.image_url);
+        const imageBase64 = body.image
+          ? Buffer.from(await body.image.arrayBuffer()).toString("base64")
+          : undefined;
+        return await BillService.runOcr(
+          userid,
+          params.id,
+          body.raw_text,
+          body.image_url,
+          imageBase64,
+          body.image?.type,
+        );
       } catch (err: any) {
         return handleError(err, set);
       }
@@ -234,4 +279,21 @@ export const BillModule = new Elysia({ prefix: "/bills" })
       }
     },
     { params: BillIdParams },
+  )
+
+  .patch(
+    "/:id/payer",
+    async ({ params, body, userid, set }) => {
+      if (!userid) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+      try {
+        const bill = await BillService.setPayer(userid, params.id, body.paid_by);
+        return { bill };
+      } catch (err: any) {
+        return handleError(err, set);
+      }
+    },
+    { params: BillIdParams, body: BillPayerPayload },
   );

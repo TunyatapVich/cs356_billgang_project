@@ -1,12 +1,18 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'bill_service.dart';
 
-// Bill model — matches the shape your backend returns from POST /bills/create.
+// ── Bill model ────────────────────────────────────────────────────────────────
+
 class Bill {
   final String id;
   final String name;
   final DateTime date;
   final String createdBy;
+  final String? paidBy;
   final String status;
   final String inviteCode;
   final DateTime createdAt;
@@ -14,12 +20,14 @@ class Bill {
   final double? vatPercent;
   final String? receiptImageUrl;
   final int memberCount;
+  final String? ownerPromptpay;
 
   const Bill({
     required this.id,
     required this.name,
     required this.date,
     required this.createdBy,
+    this.paidBy,
     required this.status,
     required this.inviteCode,
     required this.createdAt,
@@ -27,22 +35,135 @@ class Bill {
     this.vatPercent,
     this.receiptImageUrl,
     this.memberCount = 0,
+    this.ownerPromptpay,
   });
 
+  bool get isActive => status.toLowerCase() == 'active';
+
   factory Bill.fromJson(Map<String, dynamic> json) => Bill(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    date: DateTime.parse(json['date'] as String),
-    createdBy: json['created_by'] as String,
-    status: json['status'] as String,
-    inviteCode: json['invite_code'] as String,
-    createdAt: DateTime.parse(json['created_at'] as String),
-    serviceChargePercent: _toDouble(json['service_charge_pct']),
-    vatPercent: _toDouble(json['vat_pct']),
-    receiptImageUrl: json['receipt_image_url'] as String?,
-    memberCount: json['member_count'] as int? ?? 0,
+    id: (json['id'] ?? json['Id'] ?? '').toString(),
+    name: (json['name'] ?? json['Name'] ?? '').toString(),
+    date:
+        DateTime.tryParse((json['date'] ?? json['Date'] ?? '').toString()) ??
+        DateTime.now(),
+    createdBy:
+        (json['created_by'] ?? json['createdBy'] ?? json['CreatedBy'] ?? '')
+            .toString(),
+    paidBy: _parseString(json['paid_by'] ?? json['paidBy']),
+    status: (json['status'] ?? json['Status'] ?? 'active').toString(),
+    inviteCode:
+        (json['invite_code'] ?? json['inviteCode'] ?? json['InviteCode'] ?? '')
+            .toString(),
+    createdAt:
+        DateTime.tryParse(
+          (json['created_at'] ?? json['createdAt'] ?? json['CreatedAt'] ?? '')
+              .toString(),
+        ) ??
+        DateTime.now(),
+    serviceChargePercent: _toDouble(
+      json['service_charge_pct'] ??
+          json['serviceChargePct'] ??
+          json['ServiceChargePct'],
+    ),
+    vatPercent: _toDouble(json['vat_pct'] ?? json['vatPct'] ?? json['VatPct']),
+    receiptImageUrl:
+        (json['receipt_image_url'] ??
+                json['receiptImageUrl'] ??
+                json['ReceiptImageUrl'])
+            ?.toString(),
+    memberCount:
+        (json['member_count'] ??
+                json['memberCount'] ??
+                json['MemberCount'] ??
+                0)
+            as int,
+    ownerPromptpay:
+        (json['owner_promptpay'] ??
+                json['ownerPromptpay'] ??
+                json['OwnerPromptpay'])
+            ?.toString(),
+  );
+
+  Bill copyWith({String? paidBy, String? status}) => Bill(
+    id: id,
+    name: name,
+    date: date,
+    createdBy: createdBy,
+    paidBy: paidBy ?? this.paidBy,
+    status: status ?? this.status,
+    inviteCode: inviteCode,
+    createdAt: createdAt,
+    serviceChargePercent: serviceChargePercent,
+    vatPercent: vatPercent,
+    receiptImageUrl: receiptImageUrl,
+    memberCount: memberCount,
+    ownerPromptpay: ownerPromptpay,
   );
 }
+
+// ── BillItem model ────────────────────────────────────────────────────────────
+
+class BillItem {
+  final String id;
+  final String billId;
+  final String name;
+  final int quantity;
+  final double unitPrice;
+  final bool isPending;
+  final List<String>? assignedTo;
+
+  const BillItem({
+    required this.id,
+    required this.billId,
+    required this.name,
+    required this.quantity,
+    required this.unitPrice,
+    this.isPending = false,
+    this.assignedTo,
+  });
+
+  double get lineTotal => unitPrice * quantity;
+
+  factory BillItem.fromJson(Map<String, dynamic> json) {
+    // item_assigns comes from backend as array of {user_id: string} objects
+    final assigns = (json['item_assigns'] as List<dynamic>?) ?? [];
+    final assignedTo = assigns
+        .map((a) => (a['user_id'] ?? a['userId'] ?? '') as String)
+        .toList();
+    return BillItem(
+      id: (json['id'] ?? json['Id'] ?? '').toString(),
+      billId: (json['bill_id'] ?? json['billId'] ?? json['BillId'] ?? '')
+          .toString(),
+      name: (json['name'] ?? json['Name'] ?? '').toString(),
+      quantity: (json['quantity'] ?? json['Quantity'] ?? 1) as int,
+      unitPrice:
+          _toDouble(
+            json['unit_price'] ?? json['unitPrice'] ?? json['UnitPrice'],
+          ) ??
+          0.0,
+      assignedTo: assignedTo,
+    );
+  }
+
+  BillItem copyWith({
+    String? id,
+    String? name,
+    int? quantity,
+    double? unitPrice,
+    bool? isPending,
+    List<String>? assignedTo,
+  }) => BillItem(
+    id: id ?? this.id,
+    billId: billId,
+    name: name ?? this.name,
+    quantity: quantity ?? this.quantity,
+    unitPrice: unitPrice ?? this.unitPrice,
+    isPending: isPending ?? this.isPending,
+    assignedTo: assignedTo ?? this.assignedTo,
+  );
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
 
 double? _toDouble(dynamic value) {
   if (value == null) return null;
@@ -52,7 +173,17 @@ double? _toDouble(dynamic value) {
   return null;
 }
 
-// BillListNotifier — loads all bills that belong to the current user.
+String? _parseString(dynamic value) {
+  if (value == null) return null;
+  final s = value.toString().trim();
+  if (s.isEmpty || s == 'null' || s == 'NULL' || s == 'Null') return null;
+  return s;
+}
+
+String _tempId() => 'temp_${DateTime.now().microsecondsSinceEpoch}';
+
+// ── BillListNotifier ──────────────────────────────────────────────────────────
+
 class BillListNotifier extends AsyncNotifier<List<Bill>> {
   @override
   Future<List<Bill>> build() async {
@@ -61,51 +192,308 @@ class BillListNotifier extends AsyncNotifier<List<Bill>> {
   }
 
   Future<void> refreshBills() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    state = state.whenData(
+      (data) => data,
+    ); // preserve current data while loading
+    final fresh = await AsyncValue.guard(() async {
       final data = await ref.read(billServiceProvider).listBills();
       return data.map(Bill.fromJson).toList();
     });
+    state = fresh;
   }
 }
 
-// BillNotifier — manages bill state and calls BillService for HTTP requests.
-// AsyncNotifier<Bill?> means state is one of: loading | error | Bill | null.
+final billListProvider = AsyncNotifierProvider<BillListNotifier, List<Bill>>(
+  BillListNotifier.new,
+);
+
+// ── BillNotifier (single bill creation) ──────────────────────────────────────
+
 class BillNotifier extends AsyncNotifier<Bill?> {
   @override
-  Future<Bill?> build() async {
-    return null;
-  }
+  Future<Bill?> build() async => null;
 
   Future<void> createBill({
     required String name,
     required DateTime date,
     required double vatPercent,
+    double? serviceChargePercent,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final data = await ref
           .read(billServiceProvider)
-          .createBill(name: name, date: date, vatPercent: vatPercent);
-
+          .createBill(
+            name: name,
+            date: date,
+            vatPercent: vatPercent,
+            serviceChargePercent: serviceChargePercent,
+          );
       return Bill.fromJson(data['bill'] as Map<String, dynamic>);
-    });
-  }
-
-  Future<void> deleteBill(String billId) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      await ref.read(billServiceProvider).deleteBill(billId);
-      return null;
     });
   }
 }
 
-// The provider — exposes BillNotifier to any widget via ref.watch / ref.read.
 final billProvider = AsyncNotifierProvider<BillNotifier, Bill?>(
   BillNotifier.new,
 );
 
-final billListProvider = AsyncNotifierProvider<BillListNotifier, List<Bill>>(
-  BillListNotifier.new,
+// ── BillItemsNotifier (per-bill item list with optimistic updates) ─────────────
+
+class BillItemsNotifier extends AsyncNotifier<List<BillItem>> {
+  BillItemsNotifier(this.billId);
+  final String billId;
+
+  @override
+  Future<List<BillItem>> build() async {
+    final data = await ref.read(billServiceProvider).getBill(billId);
+    final rawItems = (data['items'] as List<dynamic>?) ?? [];
+    return rawItems
+        .cast<Map<String, dynamic>>()
+        .map(BillItem.fromJson)
+        .toList();
+  }
+
+  Future<void> addItem({
+    required String name,
+    required int quantity,
+    required double unitPrice,
+  }) async {
+    final tempId = _tempId();
+    final tempItem = BillItem(
+      id: tempId,
+      billId: billId,
+      name: name,
+      quantity: quantity,
+      unitPrice: unitPrice,
+      isPending: true,
+    );
+
+    // optimistic insert
+    final current = state.value ?? [];
+    state = AsyncData([...current, tempItem]);
+
+    try {
+      final json = await ref
+          .read(billServiceProvider)
+          .addItem(
+            billId: billId,
+            name: name,
+            quantity: quantity,
+            unitPrice: unitPrice,
+          );
+      final confirmed = BillItem.fromJson(json);
+      final updated = (state.value ?? [])
+          .map((i) => i.id == tempId ? confirmed : i)
+          .toList();
+      state = AsyncData(updated);
+    } catch (_) {
+      // rollback
+      state = AsyncData(
+        (state.value ?? []).where((i) => i.id != tempId).toList(),
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> addItemsBulk(List<Map<String, dynamic>> items) async {
+    final tempIds = List.generate(items.length, (_) => _tempId());
+    final tempItems = List.generate(
+      items.length,
+      (i) => BillItem(
+        id: tempIds[i],
+        billId: billId,
+        name: items[i]['name'] as String,
+        quantity: items[i]['quantity'] as int,
+        unitPrice: (items[i]['unit_price'] as num).toDouble(),
+        isPending: true,
+      ),
+    );
+
+    final current = state.value ?? [];
+    state = AsyncData([...current, ...tempItems]);
+
+    try {
+      final confirmed = await ref
+          .read(billServiceProvider)
+          .addItemsBulk(billId: billId, items: items);
+      final confirmedItems = confirmed.map(BillItem.fromJson).toList();
+      final updated = List<BillItem>.from(state.value ?? []);
+      for (var i = 0; i < tempIds.length && i < confirmedItems.length; i++) {
+        final idx = updated.indexWhere((item) => item.id == tempIds[i]);
+        if (idx >= 0) updated[idx] = confirmedItems[i];
+      }
+      state = AsyncData(updated);
+    } catch (_) {
+      state = AsyncData(
+        (state.value ?? []).where((i) => !tempIds.contains(i.id)).toList(),
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> deleteItem(String itemId) async {
+    final before = List<BillItem>.from(state.value ?? []);
+
+    // optimistic remove
+    state = AsyncData(before.where((i) => i.id != itemId).toList());
+
+    try {
+      await ref
+          .read(billServiceProvider)
+          .deleteItem(billId: billId, itemId: itemId);
+    } catch (_) {
+      // rollback
+      state = AsyncData(before);
+      rethrow;
+    }
+  }
+}
+
+final billItemsProvider = AsyncNotifierProvider.family
+    .autoDispose<BillItemsNotifier, List<BillItem>, String>(
+      (billId) => BillItemsNotifier(billId),
+    );
+
+// ── OCR state + notifier ──────────────────────────────────────────────────────
+
+enum OcrScanStatus { idle, scanning, done, error }
+
+class OcrState {
+  final OcrScanStatus status;
+  final List<Map<String, dynamic>> items;
+  final String? error;
+  final String rawText;
+
+  const OcrState({
+    this.status = OcrScanStatus.idle,
+    this.items = const [],
+    this.error,
+    this.rawText = '',
+  });
+}
+
+class OcrNotifier extends Notifier<OcrState> {
+  @override
+  OcrState build() => const OcrState();
+
+  Future<void> scan(String billId, File imageFile) async {
+    state = const OcrState(status: OcrScanStatus.scanning);
+    var rawText = '';
+    try {
+      final imageBytes = await imageFile.readAsBytes();
+      rawText = await _readReceiptText(imageFile);
+      final parsed = await ref
+          .read(billServiceProvider)
+          .runOcr(
+            billId: billId,
+            rawText: rawText,
+            imageBytes: imageBytes,
+            imageMimeType: _detectImageMimeType(imageFile, imageBytes),
+          );
+
+      if (parsed.isEmpty && rawText.trim().isEmpty) {
+        state = const OcrState(
+          status: OcrScanStatus.error,
+          error:
+              'No text was detected from this image, and the backend AI parser returned no items.',
+        );
+        return;
+      }
+
+      state = OcrState(
+        status: OcrScanStatus.done,
+        items: parsed,
+        rawText: rawText,
+      );
+    } catch (e) {
+      state = OcrState(
+        status: OcrScanStatus.error,
+        error: 'Scan failed: ${_formatScanError(e)}',
+        rawText: rawText,
+      );
+    }
+  }
+}
+
+String _formatScanError(Object error) {
+  if (error is DioException) {
+    final body = error.response?.data;
+    if (body is Map) {
+      final message = body['message'] ?? body['error'];
+      if (message != null) return _cleanErrorMessage(message.toString());
+    }
+    if (body is String && body.trim().isNotEmpty) {
+      return _cleanErrorMessage(body);
+    }
+    if (error.error != null) {
+      return _cleanErrorMessage(error.error.toString());
+    }
+    if (error.message != null && error.message!.trim().isNotEmpty) {
+      return _cleanErrorMessage(error.message!);
+    }
+  }
+
+  return _cleanErrorMessage(error.toString());
+}
+
+String _cleanErrorMessage(String message) {
+  var cleaned = message.trim();
+  cleaned = cleaned.replaceFirst(RegExp(r'^DioException \[[^\]]+\]:\s*'), '');
+  cleaned = cleaned.replaceFirst(RegExp(r'^null\s*Error:\s*'), '');
+  cleaned = cleaned.replaceFirst(RegExp(r'^Error:\s*'), '');
+  cleaned = cleaned.replaceFirst(RegExp(r'^Exception:\s*'), '');
+  return cleaned.isEmpty
+      ? 'Unable to scan receipt. Please try again.'
+      : cleaned;
+}
+
+Future<String> _readReceiptText(File imageFile) async {
+  final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
+  try {
+    final recognised = await recognizer.processImage(
+      InputImage.fromFile(imageFile),
+    );
+    return recognised.text;
+  } on MissingPluginException {
+    return '';
+  } finally {
+    try {
+      await recognizer.close();
+    } on MissingPluginException {
+      // ignore
+    }
+  }
+}
+
+String _detectImageMimeType(File imageFile, Uint8List bytes) {
+  final path = imageFile.path.toLowerCase();
+  if (path.endsWith('.png')) return 'image/png';
+  if (path.endsWith('.webp')) return 'image/webp';
+
+  if (bytes.length >= 8 &&
+      bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4E &&
+      bytes[3] == 0x47) {
+    return 'image/png';
+  }
+
+  if (bytes.length >= 12 &&
+      bytes[0] == 0x52 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46 &&
+      bytes[3] == 0x46 &&
+      bytes[8] == 0x57 &&
+      bytes[9] == 0x45 &&
+      bytes[10] == 0x42 &&
+      bytes[11] == 0x50) {
+    return 'image/webp';
+  }
+
+  return 'image/jpeg';
+}
+
+final ocrProvider = NotifierProvider.autoDispose<OcrNotifier, OcrState>(
+  OcrNotifier.new,
 );

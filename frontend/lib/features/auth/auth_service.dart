@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
@@ -18,6 +19,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> register(
     String email,
+    String phone,
     String password,
     String passwordConfirm,
   ) async {
@@ -25,14 +27,42 @@ class AuthService {
       '/auth/register',
       data: {
         'email': email,
+        'promptpay_number': phone,
         'password': password,
         'password_confirm': passwordConfirm,
       },
     );
     return response.data as Map<String, dynamic>;
   }
+
+  Future<Map<String, dynamic>> updateProfile({
+    String? displayName,
+    String? avatarUrl,
+    Uint8List? avatarBytes,
+    String? promptpayNumber,
+  }) async {
+    final formData = FormData.fromMap({
+      'display_name': ?displayName,
+      'avatar_url': ?avatarUrl,
+      'promptpay_number': ?promptpayNumber,
+      if (avatarBytes != null)
+        'avatar_file': MultipartFile.fromBytes(
+          avatarBytes,
+          filename: 'avatar.jpg',
+          contentType: DioMediaType('image', 'jpeg'),
+        ),
+    });
+
+    final response = await _dio.put('/auth/profile', data: formData);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getProfile() async {
+    final response = await _dio.get('/auth/me');
+    return response.data as Map<String, dynamic>;
+  }
 }
 
 final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(ref.read(dioProvider));
+  return AuthService(ref.read(authDioProvider));
 });

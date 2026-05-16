@@ -1,9 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/api/api_client.dart';
 import '../../core/storage/token_storage.dart';
+import '../bill/bill_provider.dart';
 import 'auth_service.dart';
 
-// User model — matches the shape your backend returns (minus password_hash)
 class User {
   final String id;
   final String email;
@@ -22,44 +22,39 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) => User(
     id: json['id'],
     email: json['email'],
-    displayName: json['display_name'],
-    avatarUrl: json['avatar_url'],
-    promptpayNumber: json['promptpay_number'],
+    displayName: json['display_name'] ?? json['displayName'],
+    avatarUrl: json['avatar_url'] ?? json['avatarUrl'],
+    promptpayNumber: json['promptpay_number'] ?? json['promptpayNumber'],
   );
 }
 
-// AuthNotifier — same as a Zustand store or useReducer auth context in React
-// AsyncNotifier<User?> means state is one of: loading | error | User | null (logged out)
 class AuthNotifier extends AsyncNotifier<User?> {
-  // build() runs once on startup — like checking localStorage for a token on page load
   @override
   Future<User?> build() async {
     final token = await TokenStorage.read();
     if (token == null) return null;
-
     try {
-      final response = await ref.read(authDioProvider).get('/auth/me');
-      final data = response.data as Map<String, dynamic>;
-      return User.fromJson(data['user'] as Map<String, dynamic>);
+      final result = await ref.read(authServiceProvider).getProfile();
+      return User.fromJson(result['user'] as Map<String, dynamic>);
     } catch (_) {
       await TokenStorage.delete();
       return null;
     }
   }
 
-  // login() — calls AuthService (which calls the API), saves token, updates state
   Future<void> login(String email, String password) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final data = await ref.read(authServiceProvider).login(email, password);
       await TokenStorage.save(data['token']);
+      ref.invalidate(billListProvider); // Clear old cached bills
       return User.fromJson(data['user'] as Map<String, dynamic>);
     });
   }
 
-  // register() — same as login but for new account creation
   Future<void> register(
     String email,
+    String phone,
     String password,
     String passwordConfirm,
   ) async {
@@ -67,22 +62,59 @@ class AuthNotifier extends AsyncNotifier<User?> {
     state = await AsyncValue.guard(() async {
       final data = await ref
           .read(authServiceProvider)
-          .register(email, password, passwordConfirm);
+          .register(email, phone, password, passwordConfirm);
       await TokenStorage.save(data['token']);
+      ref.invalidate(billListProvider); // Clear cached bills for the new user
       return User.fromJson(data['user'] as Map<String, dynamic>);
     });
   }
 
-  // logout() — clear token, set state back to null
-
   Future<void> logout() async {
     await TokenStorage.delete();
+    ref.invalidate(billListProvider); // Clear cached bills immediately
     state = const AsyncData(null);
+  }
+
+  Future<void> refresh() async {
+    state = await AsyncValue.guard(() async {
+      final data = await ref.read(authServiceProvider).getProfile();
+      return User.fromJson(data['user'] as Map<String, dynamic>);
+    });
+  }
+
+  Future<void> updateProfile({
+    String? displayName,
+    String? avatarUrl,
+    Uint8List? avatarBytes,
+    String? promptpayNumber,
+  }) async {
+    final data = await ref
+        .read(authServiceProvider)
+        .updateProfile(
+          displayName: displayName,
+          avatarUrl: avatarUrl,
+          avatarBytes: avatarBytes,
+          promptpayNumber: promptpayNumber,
+        );
+    final userJson = data['user'] as Map<String, dynamic>?;
+    if (userJson != null) {
+      state = AsyncData(User.fromJson(userJson));
+      ref.invalidate(billListProvider);
+    }
   }
 }
 
-// The provider — exposes AuthNotifier to any widget via ref.watch / ref.read
-// Same as: export const useAuthStore = create(...) in Zustand
 final authProvider = AsyncNotifierProvider<AuthNotifier, User?>(
   AuthNotifier.new,
 );
+
+// // 30-day expiry system (commented out — uncomment to re-enable)
+// // In TokenStorage:
+// //   static const _lastLoginKey = 'last_login';
+// //   static const _expiryDays = 30;
+// //   static Future<void> saveLastLogin() async { ... }
+// //   static Future<DateTime?> readLastLogin() async { ... }
+// //   static Future<bool> isTokenExpired() async { ... }
+// //
+// // In AuthNotifier.build():
+// //   if (await TokenStorage.isTokenExpired()) { await TokenStorage.delete(); return null; }

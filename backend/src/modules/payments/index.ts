@@ -9,6 +9,7 @@ import {
 import { PaymentService } from "./service";
 import { authPlugin } from "../utils/auth";
 import { broadcast } from "../utils/broker";
+import { uploadImage } from "../utils/storage";
 
 const handleError = (err: any, set: any) => {
   if (err?.message === "FORBIDDEN") {
@@ -74,7 +75,16 @@ export const PaymentModule = new Elysia({ prefix: "/payments" })
         return { message: "Unauthorized" };
       }
       try {
-        const result = await PaymentService.confirm(userid, params.id, body.slip_url);
+        let slipUrl: string | undefined;
+        console.log("[confirm] paymentId:", params.id, "| slip present:", !!body.slip);
+        if (body.slip) {
+          slipUrl = await uploadImage(
+            await body.slip.arrayBuffer(),
+            body.slip.type || "image/jpeg",
+          );
+          console.log("[confirm] uploaded slip to R2:", slipUrl);
+        }
+        const result = await PaymentService.confirm(userid, params.id, slipUrl);
         broadcast(result.payment.bill_id, {
           type: "payment_confirmed",
           payment: result.payment,

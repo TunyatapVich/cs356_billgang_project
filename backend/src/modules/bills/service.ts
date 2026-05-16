@@ -2,6 +2,8 @@ import { prisma } from "../../db";
 import { decimalToNumber } from "../utils/decimal";
 import { minCashFlow, type Transfer } from "../utils/mincashflow";
 import { parseReceiptText, type ParsedItem } from "../utils/ocr";
+import { broadcast } from "../utils/broker";
+import { UserStatsService } from "../users/service";
 import type {
   BillCreateRequest,
   BillItemsRequest,
@@ -9,11 +11,38 @@ import type {
   BillPatchRequest,
 } from "./model";
 
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const numbers = "0123456789";
+const inviteCodePattern = /^[A-Z]{3}\d{5}$/;
+
+const randomText = (source: string, length: number) =>
+  Array.from(
+    { length },
+    () => source[Math.floor(Math.random() * source.length)],
+  ).join("");
+
 const generateInviteCode = () =>
-  Math.random().toString(36).substring(2, 8).toUpperCase();
+  `${randomText(letters, 3)}${randomText(numbers, 5)}`;
+
+const isInviteCodeValid = (code?: string | null) =>
+  code !== undefined && code !== null && inviteCodePattern.test(code);
+
+const createInviteCode = async () => {
+  for (let i = 0; i < 10; i++) {
+    const code = generateInviteCode();
+    const exists = await prisma.bills.findUnique({
+      where: { invite_code: code },
+    });
+
+    if (!exists) return code;
+  }
+
+  throw new Error("INVITE_CODE_FAILED");
+};
 
 const serializeBill = (bill: any) => ({
   ...bill,
+  paid_by: (bill.paid_by === null || bill.paid_by === undefined || bill.paid_by === 'null') ? null : bill.paid_by,
   service_charge_pct: decimalToNumber(bill.service_charge_pct),
   vat_pct: decimalToNumber(bill.vat_pct),
 });
@@ -80,8 +109,10 @@ export class BillService {
 
     if (!bill) throw new Error("NOT_FOUND");
 
+    const serialized = serializeBill({ ...bill, bill_items: undefined, bill_members: undefined });
+
     return {
-      bill: serializeBill({ ...bill, bill_items: undefined, bill_members: undefined }),
+      bill: serialized,
       items: bill.bill_items.map((item) => ({
         ...serializeItem(item),
         item_assigns: item.item_assigns,
@@ -101,17 +132,19 @@ export class BillService {
     const bill = await prisma.bills.create({
       data: {
         created_by: userid,
+        // paid_by starts as null — set later via PATCH /bills/:id/payer
         name: data.name,
         date: new Date(data.date),
         vat_pct: data.vat_pct ?? 0,
         service_charge_pct: data.service_charge_pct ?? 0,
         status: "active",
-        invite_code: generateInviteCode(),
+        invite_code: await createInviteCode(),
         bill_members: {
           create: { user_id: userid, role: "owner" },
         },
       },
     });
+    UserStatsService.onBillCreated(userid).catch(console.error);
     return serializeBill(bill);
   }
 
@@ -185,7 +218,32 @@ export class BillService {
     return result.count > 0;
   }
 
-  static async runOcr(userid: string, billId: string, rawText: string, imageUrl?: string) {
+  static async assignItem(userid: string, billId: string, itemId: string, assignUserId: string) {
+    await this.assertMember(userid, billId);
+    await prisma.itemAssigns.upsert({
+      where: { bill_item_id_user_id: { bill_item_id: itemId, user_id: assignUserId } },
+      create: { bill_item_id: itemId, user_id: assignUserId },
+      update: {},
+    });
+    broadcast(billId, { type: "item_assigned", item_id: itemId, user_id: assignUserId });
+  }
+
+  static async unassignItem(userid: string, billId: string, itemId: string, assignUserId: string) {
+    await this.assertMember(userid, billId);
+    await prisma.itemAssigns.deleteMany({
+      where: { bill_item_id: itemId, user_id: assignUserId },
+    });
+    broadcast(billId, { type: "item_unassigned", item_id: itemId, user_id: assignUserId });
+  }
+
+  static async runOcr(
+    userid: string,
+    billId: string,
+    rawText: string,
+    imageUrl?: string,
+    imageBase64?: string,
+    imageMimeType?: string,
+  ) {
     await this.assertMember(userid, billId);
     if (imageUrl) {
       await prisma.bills.update({
@@ -193,7 +251,7 @@ export class BillService {
         data: { receipt_image_url: imageUrl },
       });
     }
-    const items = await parseReceiptText(rawText);
+    const items = await parseReceiptText(rawText, imageBase64, imageMimeType);
     return { items } as { items: ParsedItem[] };
   }
 
@@ -201,10 +259,10 @@ export class BillService {
     await this.assertMember(userid, billId);
     let bill = await prisma.bills.findUnique({ where: { id: billId } });
     if (!bill) throw new Error("NOT_FOUND");
-    if (!bill.invite_code) {
+    if (!isInviteCodeValid(bill.invite_code)) {
       bill = await prisma.bills.update({
         where: { id: billId },
-        data: { invite_code: generateInviteCode() },
+        data: { invite_code: await createInviteCode() },
       });
     }
     const deepLink = `billgang://join/${bill.invite_code}`;
@@ -212,14 +270,21 @@ export class BillService {
   }
 
   static async joinByCode(userid: string, code: string) {
-    const bill = await prisma.bills.findUnique({ where: { invite_code: code } });
+    const bill = await prisma.bills.findUnique({
+      where: { invite_code: code.toUpperCase() },
+    });
     if (!bill) throw new Error("NOT_FOUND");
 
-    await prisma.billMembers.upsert({
+    const existing = await prisma.billMembers.findUnique({
       where: { bill_id_user_id: { bill_id: bill.id, user_id: userid } },
-      update: {},
-      create: { bill_id: bill.id, user_id: userid, role: "member" },
     });
+
+    if (!existing) {
+      await prisma.billMembers.create({
+        data: { bill_id: bill.id, user_id: userid, role: "member" },
+      });
+      UserStatsService.onBillJoined(userid).catch(console.error);
+    }
 
     return this.getBill(userid, bill.id);
   }
@@ -246,6 +311,10 @@ export class BillService {
       },
     });
     if (!bill) throw new Error("NOT_FOUND");
+
+    // paid_by is the person who paid; if not set, defaults to created_by
+    const rawPayerId = bill.paid_by;
+    const payerId = (rawPayerId === null || rawPayerId === undefined || rawPayerId === 'null') ? bill.created_by : rawPayerId;
 
     const subtotal: Record<string, number> = {};
     for (const member of bill.bill_members) subtotal[member.user_id] = 0;
@@ -275,7 +344,7 @@ export class BillService {
     for (const userId of Object.keys(owed)) {
       balances[userId] = -owed[userId];
     }
-    balances[bill.created_by] = (balances[bill.created_by] ?? 0) + totalOwed;
+    balances[payerId] = (balances[payerId] ?? 0) + totalOwed;
 
     const transfers: Transfer[] = minCashFlow(balances);
 
@@ -300,6 +369,18 @@ export class BillService {
       })),
       bill: serializeBill({ ...bill, bill_items: undefined, bill_members: undefined }),
     };
+  }
+
+  static async setPayer(userid: string, billId: string, payerId: string) {
+    // Verify requesting user is a member
+    await this.assertMember(userid, billId);
+
+    const bill = await prisma.bills.update({
+      where: { id: billId },
+      data: { paid_by: payerId },
+    });
+    broadcast(billId, { type: "payer_set", paid_by: payerId });
+    return serializeBill(bill);
   }
 }
 
