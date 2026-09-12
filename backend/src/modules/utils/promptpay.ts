@@ -6,17 +6,19 @@ const sanitizeTarget = (raw: string) => raw.replace(/\D/g, "");
 const formatTarget = (raw: string): { tag: string; value: string } => {
   const digits = sanitizeTarget(raw);
 
+  if (digits.length === 10) {
+    return { tag: "01", value: "0066" + digits.slice(1) };
+  }
+
   if (digits.length === 13) {
     return { tag: "02", value: digits };
   }
 
-  let mobile = digits;
-  if (mobile.startsWith("0")) {
-    mobile = "66" + mobile.slice(1);
-  } else if (!mobile.startsWith("66")) {
-    mobile = "66" + mobile;
+  if (digits.length === 15) {
+    return { tag: "03", value: digits };
   }
-  return { tag: "01", value: "0000" + mobile };
+
+  return { tag: "01", value: digits };
 };
 
 const crc16ccittFalse = (data: string): string => {

@@ -1,14 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-
-String get _wsBaseUrl {
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    return 'ws://10.0.2.2:3000';
-  }
-  return 'ws://localhost:3000';
-}
+import '../config/app_config.dart';
 
 class SocketClient {
   WebSocketChannel? _channel;
@@ -20,7 +13,7 @@ class SocketClient {
   void connect(String billId, String token) {
     _disconnected = false;
     _channel = WebSocketChannel.connect(
-      Uri.parse('$_wsBaseUrl/ws/bills/$billId?token=$token'),
+      Uri.parse('${AppConfig.wsBaseUrl}/ws/bills/$billId?token=$token'),
     );
     _channel!.stream.listen(
       (data) => _controller.add(jsonDecode(data as String)),

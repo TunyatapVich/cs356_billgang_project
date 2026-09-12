@@ -2,14 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../storage/token_storage.dart';
-
-String get _baseUrl {
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    return 'http://10.0.2.2:3000';
-  }
-
-  return 'http://localhost:3000';
-}
+import '../config/app_config.dart';
 
 // ── Shared interceptor setup ──────────────────────────────────────────────
 
@@ -62,14 +55,14 @@ void _addInterceptors(Dio dio) {
 
 // Unauthenticated Dio — for login / register (no token needed)
 final dioProvider = Provider<Dio>((ref) {
-  final dio = Dio(BaseOptions(baseUrl: _baseUrl));
+  final dio = Dio(BaseOptions(baseUrl: AppConfig.baseUrl));
   _addInterceptors(dio);
   return dio;
 });
 
 // Authenticated Dio — for protected endpoints (attaches JWT from storage)
 final authDioProvider = Provider<Dio>((ref) {
-  final dio = Dio(BaseOptions(baseUrl: _baseUrl));
+  final dio = Dio(BaseOptions(baseUrl: AppConfig.baseUrl));
   _addInterceptors(dio);
 
   dio.interceptors.add(

@@ -16,6 +16,8 @@ export const BillPatchPayload = t.Object({
   name: t.Optional(t.String()),
   date: t.Optional(t.String()),
   status: t.Optional(t.String()),
+  receipt_total: t.Optional(t.Number({ minimum: 0 })),
+  charges_included: t.Optional(t.Boolean()),
   vat_pct: t.Optional(t.Number({ minimum: 0 })),
   service_charge_pct: t.Optional(t.Number({ minimum: 0 })),
 });
@@ -23,6 +25,11 @@ export type BillPatchRequest = Static<typeof BillPatchPayload>;
 
 export const BillPayerPayload = t.Object({ paid_by: t.String() });
 export type BillPayerRequest = Static<typeof BillPayerPayload>;
+
+export const BillMemberCreatePayload = t.Object({
+  name: t.Optional(t.String({ maxLength: 255 })),
+});
+export type BillMemberCreateRequest = Static<typeof BillMemberCreatePayload>;
 
 const ItemInput = t.Object({
   name: t.String(),
@@ -36,6 +43,27 @@ export const BillItemsPayload = t.Union([
 ]);
 export type BillItemsRequest = Static<typeof BillItemsPayload>;
 
+export const BillFinalizePayload = t.Object({
+  name: t.Optional(t.String()),
+  date: t.Optional(t.String()),
+  receipt_total: t.Optional(t.Number({ minimum: 0 })),
+  charges_included: t.Optional(t.Boolean()),
+  vat_pct: t.Optional(t.Number({ minimum: 0 })),
+  service_charge_pct: t.Optional(t.Number({ minimum: 0 })),
+  items: t.Array(ItemInput),
+});
+export type BillFinalizeRequest = Static<typeof BillFinalizePayload>;
+
+export const BillItemAssignmentsPayload = t.Object({
+  assignments: t.Array(
+    t.Object({
+      user_id: t.String(),
+      quantity: t.Integer({ minimum: 0 }),
+    }),
+  ),
+});
+export type BillItemAssignmentsRequest = Static<typeof BillItemAssignmentsPayload>;
+
 export const BillItemUpdatePayload = t.Object({
   name: t.Optional(t.String()),
   quantity: t.Optional(t.Integer({ minimum: 1 })),
@@ -44,7 +72,7 @@ export const BillItemUpdatePayload = t.Object({
 export type BillItemUpdateRequest = Static<typeof BillItemUpdatePayload>;
 
 export const BillOcrPayload = t.Object({
-  raw_text: t.String(),
+  raw_text: t.Optional(t.String()),
   image_url: t.Optional(t.String()),
   image: t.Optional(t.File()),
 });

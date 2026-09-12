@@ -1,5 +1,6 @@
 import { prisma } from "../../db";
 import { decimalToNumber } from "../utils/decimal";
+import { computeExplicitItemShares } from "../utils/billmath";
 import { minCashFlow, type Transfer } from "../utils/mincashflow";
 
 const serializeStats = (s: any) => ({
@@ -49,6 +50,23 @@ export class UserStatsService {
         const lineTotal = price * item.quantity;
         const assignees = item.item_assigns.map((a) => a.user_id);
         if (assignees.length === 0) continue;
+        const hasExplicitQuantities = item.item_assigns.some(
+          (assign) => assign.assigned_quantity !== null && assign.assigned_quantity !== undefined,
+        );
+        if (hasExplicitQuantities) {
+          const shares = computeExplicitItemShares({
+            unit_price: price,
+            quantity: item.quantity,
+            assignees: item.item_assigns.map((assign) => ({
+              user_id: assign.user_id,
+              assigned_quantity: assign.assigned_quantity,
+            })),
+          });
+          for (const [userId, share] of Object.entries(shares)) {
+            subtotal[userId] = (subtotal[userId] ?? 0) + share;
+          }
+          continue;
+        }
         const share = lineTotal / assignees.length;
         for (const u of assignees) subtotal[u] = (subtotal[u] ?? 0) + share;
       }

@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/app_text_field.dart';
-import '../../core/widgets/error_banner.dart';
-import '../../core/widgets/primary_button.dart';
 import 'auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
+
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
@@ -63,9 +61,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.read(authProvider);
     authState.when(
       data: (user) {
-        if (user != null) context.go('/');
+        if (user != null && mounted) context.go('/');
       },
-      error: (e, _) => setState(() => _errorMessage = e.toString()),
+      error: (e, _) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+          });
+        }
+      },
       loading: () {},
     );
   }
@@ -79,72 +83,259 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'BillGang',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                // Logo & Header
+                Center(
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [AppColors.primaryBlue, AppColors.primaryDark],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Stack(
+                              children: [
+                                Positioned(
+                                  left: 8,
+                                  top: 11,
+                                  child: Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: 8,
+                                  top: 11,
+                                  child: Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'BillGang',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Welcome back',
+                        style: TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Split the bill. Keep the friendship.',
+                        style: TextStyle(
+                          color: AppColors.textGray,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 32),
-                AppTextField(
-                  controller: _emailController,
-                  hintText: 'Email address',
-                  keyboardType: TextInputType.emailAddress,
-                  prefixIcon: Icons.email_outlined,
-                  errorText: _emailError,
-                ),
-                const SizedBox(height: 16),
-                AppTextField(
-                  controller: _passwordController,
-                  hintText: 'Password',
-                  obscureText: _obscurePassword,
-                  prefixIcon: Icons.lock_outline,
-                  errorText: _passwordError,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                      color: AppColors.textGray,
-                      size: 20,
+
+                // Error banner
+                if (_errorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.errorRed.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.3)),
                     ),
-                    onPressed: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: AppColors.errorRed, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(color: AppColors.errorRed, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Email field
+                const Text(
+                  'EMAIL ADDRESS',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textGray,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  ErrorBanner(message: _errorMessage!),
-                ],
-                const SizedBox(height: 24),
-                PrimaryButton(
-                  label: 'Sign in',
-                  isLoading: isLoading,
-                  onPressed: _submit,
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  style: const TextStyle(fontSize: 15, color: AppColors.textDark),
+                  decoration: InputDecoration(
+                    hintText: 'you@example.com',
+                    hintStyle: const TextStyle(color: AppColors.textGray, fontSize: 15),
+                    filled: true,
+                    fillColor: AppColors.cardWhite,
+                    prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textGray, size: 20),
+                    errorText: _emailError,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.inputBorder),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.inputBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+
+                // Password field
+                const Text(
+                  'PASSWORD',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textGray,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  style: const TextStyle(fontSize: 15, color: AppColors.textDark),
+                  decoration: InputDecoration(
+                    hintText: 'Your password',
+                    hintStyle: const TextStyle(color: AppColors.textGray, fontSize: 15),
+                    filled: true,
+                    fillColor: AppColors.cardWhite,
+                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textGray, size: 20),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        color: AppColors.textGray,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                    errorText: _passwordError,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.inputBorder),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.inputBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Sign in Button
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    onPressed: isLoading ? null : _submit,
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : const Text(
+                            'Sign in',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Divider
+                Row(
+                  children: [
+                    Expanded(child: Container(height: 1, color: AppColors.inputBorder)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('or', style: TextStyle(color: AppColors.textGray, fontSize: 14)),
+                    ),
+                    Expanded(child: Container(height: 1, color: AppColors.inputBorder)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Register link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      "Don't have an account? ",
-                      style: TextStyle(color: AppColors.textGray, fontSize: 14),
+                      'New to BillGang? ',
+                      style: TextStyle(color: AppColors.textGray, fontSize: 15),
                     ),
                     GestureDetector(
                       onTap: () => context.go('/register'),
                       child: const Text(
-                        'Register',
+                        'Create an account',
                         style: TextStyle(
                           color: AppColors.primaryBlue,
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

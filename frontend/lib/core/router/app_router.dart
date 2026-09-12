@@ -6,6 +6,7 @@ import '../../features/auth/register_screen.dart';
 import '../../features/auth/auth_provider.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/bill/new_bill_screen.dart';
 import '../../features/bill/create_bill_screen.dart';
 import '../../features/bill/add_items_screen.dart';
 import '../../features/bill/ocr_review_screen.dart';
@@ -74,6 +75,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/bill/new',
+        builder: (context, state) => const NewBillScreen(),
+      ),
       GoRoute(
         path: '/bill/create',
         builder: (context, state) => const CreateBillScreen(),

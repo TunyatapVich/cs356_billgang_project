@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/api/api_client.dart';
+import '../../core/widgets/screen_app_bar.dart';
 import '../bill/bill_provider.dart';
 
 class JoinScreen extends ConsumerStatefulWidget {
@@ -15,12 +16,10 @@ class JoinScreen extends ConsumerStatefulWidget {
 }
 
 class _JoinScreenState extends ConsumerState<JoinScreen> {
-
   final _codeController = TextEditingController();
   bool _isScanning = false;
-  Object? _error;
+  String? _error;
   bool _loading = false;
-  String? _billId;
   MobileScannerController? _scannerController;
 
   @override
@@ -31,12 +30,8 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
   }
 
   String? _extractCode(String raw) {
-    final trimmed = raw.trim().toUpperCase();
-    if (RegExp(r'^[A-Z]{3}\d{5}$').hasMatch(trimmed)) return trimmed;
-    final deepLinkMatch = RegExp(r'billgang://join/([A-Z]{3}\d{5})').firstMatch(raw);
-    if (deepLinkMatch != null) return deepLinkMatch.group(1)!.toUpperCase();
-    if (RegExp(r'^[A-Z]{3}\d{5}$').hasMatch(raw.toUpperCase())) return raw.toUpperCase();
-    return null;
+    final match = RegExp(r'[A-Z]{3}\d{5}', caseSensitive: false).firstMatch(raw.trim());
+    return match?.group(0)?.toUpperCase();
   }
 
   Future<void> _joinByCode(String code) async {
@@ -51,19 +46,19 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
       final response = await ref.read(authDioProvider).post('/bills/join/$code');
       final data = response.data as Map<String, dynamic>;
       final bill = data['bill'] as Map<String, dynamic>?;
-      _billId = bill?['id'] as String?;
+      final billId = bill?['id'] as String?;
 
       if (!mounted) return;
-      if (_billId != null) {
+      if (billId != null) {
         ref.read(billListProvider.notifier).refreshBills();
-        context.go('/bill/$_billId/items');
+        context.go('/bill/$billId/assign');
       } else {
         context.go('/');
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e;
+        _error = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
         _loading = false;
       });
     }
@@ -74,7 +69,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
     if (raw.isEmpty) return;
     final code = _extractCode(raw);
     if (code == null) {
-      setState(() => _error = Exception('Invalid invite code format'));
+      setState(() => _error = 'Enter a valid invite code or deep link.');
       return;
     }
     _joinByCode(code);
@@ -95,62 +90,60 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgLight,
-      appBar: AppBar(
-        backgroundColor: AppColors.bgLight,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
-          onPressed: () => context.go('/'),
-        ),
-        title: const Text(
-          'Join Bill',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      body: _isScanning ? _buildScanner() : _buildBody(),
-    );
-  }
-
-  Widget _buildBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-      child: Column(
-        children: [
-          _buildHero(),
-          const SizedBox(height: 24),
-          const Text(
-            'Join a Bill',
-            style: TextStyle(
-              color: AppColors.textDark,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const ScreenAppBar(title: 'Join Bill', backHref: '/'),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                child: Column(
+                  children: [
+                    _buildHero(),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Join a Bill',
+                      style: TextStyle(
+                        color: AppColors.textDark,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Enter the invite code or scan the QR code from your friend.',
+                      style: TextStyle(
+                        color: AppColors.textGray,
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 28),
+                    if (_error != null) ...[
+                      _buildError(_error!),
+                      const SizedBox(height: 16),
+                    ],
+                    if (_isScanning)
+                      _buildScannerCard()
+                    else ...[
+                      _buildCodeInput(),
+                      const SizedBox(height: 16),
+                      _buildJoinButton(),
+                      const SizedBox(height: 24),
+                      _buildDivider(),
+                      const SizedBox(height: 24),
+                      _buildScanButton(),
+                      const SizedBox(height: 20),
+                      _buildInfoCard(),
+                    ],
+                  ],
+                ),
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Enter the invite code or scan the QR code from your friend.',
-            style: TextStyle(color: AppColors.textGray, fontSize: 16, height: 1.4),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          _buildCodeInput(),
-          const SizedBox(height: 16),
-          _buildJoinButton(),
-          if (_error != null) ...[
-            const SizedBox(height: 16),
-            _buildError(_error!),
           ],
-          const SizedBox(height: 24),
-          _buildDivider(),
-          const SizedBox(height: 24),
-          _buildScanButton(),
-        ],
+        ),
       ),
     );
   }
@@ -160,31 +153,36 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
       clipBehavior: Clip.none,
       children: [
         Container(
-          width: 160,
-          height: 160,
+          width: 150,
+          height: 150,
           decoration: const BoxDecoration(
             color: Color(0xFFE4E6FF),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.qr_code_scanner, color: AppColors.primaryBlue, size: 72),
+          child: const Center(
+            child: Icon(Icons.qr_code_2, color: AppColors.primaryBlue, size: 72),
+          ),
         ),
         Positioned(
           right: 4,
           bottom: 4,
           child: Container(
-            padding: const EdgeInsets.all(12),
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               color: AppColors.primaryBlue,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primaryBlue.withValues(alpha: 0.24),
-                  blurRadius: 14,
-                  offset: const Offset(0, 8),
+                  color: AppColors.primaryBlue.withValues(alpha: 0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: const Icon(Icons.group_add, color: Colors.white, size: 24),
+            child: const Center(
+              child: Icon(Icons.group, color: Colors.white, size: 22),
+            ),
           ),
         ),
       ],
@@ -200,8 +198,8 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -211,7 +209,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
         style: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          letterSpacing: 2,
+          letterSpacing: 3,
           color: AppColors.primaryBlue,
         ),
         textAlign: TextAlign.center,
@@ -219,15 +217,15 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
           hintText: 'ABC12345',
           hintStyle: TextStyle(
             color: AppColors.textGray.withValues(alpha: 0.5),
-            letterSpacing: 2,
+            letterSpacing: 3,
             fontWeight: FontWeight.normal,
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
         inputFormatters: [
           FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-          LengthLimitingTextInputFormatter(8),
+          LengthLimitingTextInputFormatter(10),
         ],
         onSubmitted: (_) => _onCodeSubmit(),
       ),
@@ -257,7 +255,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
               )
             : const Text(
                 'Join Bill',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
       ),
     );
@@ -287,70 +285,90 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 0,
         ),
-        onPressed: () => setState(() => _isScanning = true),
+        onPressed: () {
+          setState(() {
+            _error = null;
+            _isScanning = true;
+          });
+        },
         icon: const Icon(Icons.qr_code_scanner, size: 20),
         label: const Text(
           'Scan QR Code',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
       ),
     );
   }
 
-  Widget _buildScanner() {
+  Widget _buildScannerCard() {
     _scannerController ??= MobileScannerController();
-    return Stack(
+    return Column(
       children: [
-        MobileScanner(
-          controller: _scannerController!,
-          onDetect: _onBarcodeDetected,
-        ),
-        Positioned(
-          top: 16,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Point camera at QR code',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                ),
-              ),
-            ),
+        Container(
+          height: 260,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.inputBorder),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: MobileScanner(
+            controller: _scannerController!,
+            onDetect: _onBarcodeDetected,
           ),
         ),
-        Positioned(
-          bottom: 32,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            child: Center(
-              child: TextButton(
-                onPressed: () {
-                  _scannerController?.dispose();
-                  _scannerController = null;
-                  setState(() => _isScanning = false);
-                },
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
-              ),
+        const SizedBox(height: 12),
+        const Text(
+          'Point your camera at the invite QR code.',
+          style: TextStyle(color: AppColors.textGray, fontSize: 14),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textDark,
+              side: const BorderSide(color: AppColors.inputBorder),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
+            onPressed: () {
+              _scannerController?.dispose();
+              _scannerController = null;
+              setState(() => _isScanning = false);
+            },
+            child: const Text('Cancel scan'),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildError(Object error) {
+  Widget _buildInfoCard() {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE4E6FF).withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.qr_code_scanner, size: 18, color: AppColors.textGray),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Camera access is required to scan an invite QR code.',
+              style: TextStyle(fontSize: 13, color: AppColors.textGray),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildError(String error) {
+    return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.errorRed.withValues(alpha: 0.08),
@@ -363,7 +381,7 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              error.toString(),
+              error,
               style: const TextStyle(color: AppColors.errorRed, fontSize: 13),
             ),
           ),

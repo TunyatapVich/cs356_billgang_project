@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/avatar_stack.dart';
+import '../auth/auth_provider.dart';
 import '../bill/bill_provider.dart';
 import '../bill/bill_service.dart';
 import '../bill/widgets/skeleton_loader.dart';
@@ -15,7 +17,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
-
   late TabController _tabController;
 
   @override
@@ -62,18 +63,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             const SizedBox(height: 24),
             _SheetOption(
-              icon: Icons.add_circle_outline,
+              icon: Icons.add,
               iconColor: AppColors.primaryBlue,
               label: 'Create New Bill',
-              subtitle: 'Start a new bill and invite friends',
+              subtitle: 'Start a new bill with receipt scan or manual entry',
               onTap: () {
                 Navigator.pop(context);
-                context.go('/bill/create');
+                context.go('/bill/new');
               },
             ),
             const SizedBox(height: 12),
             _SheetOption(
-              icon: Icons.qr_code_scanner,
+              icon: Icons.people_outline,
               iconColor: AppColors.primaryBlue,
               label: 'Join a Bill',
               subtitle: 'Use invite code or scan QR code',
@@ -92,6 +93,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final billState = ref.watch(billListProvider);
+    final user = ref.watch(authProvider).value;
 
     return Scaffold(
       backgroundColor: AppColors.bgLight,
@@ -99,7 +101,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         onPressed: _showCreateOrJoin,
         backgroundColor: AppColors.primaryBlue,
         elevation: 4,
-        child: const Icon(Icons.add, color: Colors.white, size: 26),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
@@ -111,14 +113,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               'BillGang',
               style: TextStyle(
                 color: AppColors.primaryBlue,
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
               ),
             ),
             actions: [
-              IconButton(
-                onPressed: () => context.go('/profile'),
-                icon: const Icon(Icons.person_outline, color: AppColors.primaryBlue),
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: GestureDetector(
+                  onTap: () => context.go('/profile'),
+                  child: UserAvatar(
+                    name: user?.displayName,
+                    email: user?.email,
+                    avatarUrl: user?.avatarUrl,
+                    size: AvatarSize.normal,
+                  ),
+                ),
               ),
             ],
             bottom: PreferredSize(
@@ -132,6 +143,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   unselectedLabelColor: AppColors.textGray,
                   indicatorColor: AppColors.primaryBlue,
                   indicatorWeight: 3,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 15),
                   tabs: const [
                     Tab(text: 'Active'),
                     Tab(text: 'Settled'),
@@ -154,14 +167,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return TabBarView(
       controller: _tabController,
       children: [
-        _buildBillSection(bills.where((b) => b.isActive).toList()),
-        _buildBillSection(bills.where((b) => !b.isActive).toList()),
+        _buildBillSection(bills.where((b) => b.isActive).toList(), isActiveTab: true),
+        _buildBillSection(bills.where((b) => !b.isActive).toList(), isActiveTab: false),
       ],
     );
   }
 
-  Widget _buildBillSection(List<Bill> bills) {
-    if (bills.isEmpty) return _buildEmpty();
+  Widget _buildBillSection(List<Bill> bills, {required bool isActiveTab}) {
+    if (bills.isEmpty) return _buildEmpty(isActiveTab: isActiveTab);
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
       itemCount: bills.length,
@@ -175,26 +188,56 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmpty({required bool isActiveTab}) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long,
-            color: AppColors.textGray.withValues(alpha: 0.4),
-            size: 64,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No bills here',
-            style: TextStyle(
-              color: AppColors.textDark,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: AppColors.dimBlue,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.receipt_long, color: AppColors.primaryBlue, size: 36),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              isActiveTab ? 'No active bills' : 'No settled bills',
+              style: const TextStyle(
+                color: AppColors.textDark,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isActiveTab
+                  ? 'Start by creating a new bill or join one with your friends.'
+                  : 'Bills you settle will appear here.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textGray, fontSize: 13),
+            ),
+            if (isActiveTab) ...[
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  elevation: 0,
+                ),
+                onPressed: () => context.go('/bill/new'),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Create Bill', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -216,11 +259,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               child: const Icon(Icons.error_outline, color: AppColors.errorRed, size: 32),
             ),
             const SizedBox(height: 20),
-            const Text('Unable to load bills',
-                style: TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
+            const Text(
+              'Unable to load bills',
+              style: TextStyle(
+                color: AppColors.textDark,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
               error.toString(),
@@ -233,13 +279,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 backgroundColor: AppColors.primaryBlue,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shape:
-                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                padding: const EdgeInsets.symmetric(horizontal: 32),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               ),
               onPressed: () => ref.read(billListProvider.notifier).refreshBills(),
-              child: const Text('Try Again',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Try Again', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -262,7 +306,6 @@ class _SheetOption extends StatelessWidget {
     required this.subtitle,
     required this.onTap,
   });
-
 
   @override
   Widget build(BuildContext context) {
@@ -332,9 +375,10 @@ class _BillCard extends StatelessWidget {
   final Bill bill;
   final VoidCallback onDelete;
 
-
   @override
   Widget build(BuildContext context) {
+    final hasReceiptImage = bill.receiptImageUrl != null && bill.receiptImageUrl!.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
@@ -347,23 +391,36 @@ class _BillCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.cardWhite,
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.inputBorder),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: Row(
               children: [
+                // Thumbnail
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE4E6FF),
+                    color: AppColors.dimBlue,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.receipt, color: AppColors.primaryBlue, size: 22),
+                  child: hasReceiptImage
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.network(
+                            bill.receiptImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.receipt, color: AppColors.primaryBlue, size: 24),
+                          ),
+                        )
+                      : const Icon(Icons.receipt, color: AppColors.primaryBlue, size: 24),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -377,22 +434,36 @@ class _BillCard extends StatelessWidget {
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '${bill.memberCount} people  ·  ${_formatDate(bill.date)}',
-                        style: const TextStyle(color: AppColors.textGray, fontSize: 12),
+                      Row(
+                        children: [
+                          const Icon(Icons.people_outline, size: 14, color: AppColors.textGray),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${bill.memberCount} ${bill.memberCount == 1 ? 'member' : 'members'}',
+                            style: const TextStyle(color: AppColors.textGray, fontSize: 12),
+                          ),
+                          const SizedBox(width: 10),
+                          const Icon(Icons.calendar_today_outlined, size: 13, color: AppColors.textGray),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatDate(bill.date),
+                            style: const TextStyle(color: AppColors.textGray, fontSize: 12),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  width: 8,
-                  height: 8,
+                  width: 9,
+                  height: 9,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
                   decoration: BoxDecoration(
-                    color: bill.isActive
-                        ? const Color(0xFF34C759)
-                        : AppColors.textGray.withValues(alpha: 0.4),
+                    color: bill.isActive ? AppColors.selectedGreen : const Color(0xFFCBD5E1),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -408,7 +479,10 @@ class _BillCard extends StatelessWidget {
                   },
                   itemBuilder: (ctx) => [
                     const PopupMenuItem(value: 'edit', child: Text('Edit Bill')),
-                    const PopupMenuItem(value: 'delete', child: Text('Delete Bill', style: TextStyle(color: AppColors.errorRed))),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete Bill', style: TextStyle(color: AppColors.errorRed)),
+                    ),
                   ],
                 ),
               ],
@@ -423,16 +497,20 @@ class _BillCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Bill'),
-        content: Text('Delete "${bill.name}"? This cannot be undone.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Delete Bill', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete "${bill.name}"? This cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textGray)),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               onDelete();
             },
-            child: const Text('Delete', style: TextStyle(color: AppColors.errorRed)),
+            child: const Text('Delete', style: TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

@@ -2,17 +2,25 @@
   "name": "backend",
   "version": "1.0.50",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "test": "bun test src",
+    "generate": "bunx prisma generate",
+    "build": "bunx prisma generate",
+    "start": "bun run src/index.ts",
+    "dev": "bun run generate && bun run --watch src/index.ts"
   },
   "dependencies": {
+    "@elysiajs/cors": "^1.4.2",
     "@elysiajs/jwt": "^1.4.2",
     "@elysiajs/openapi": "^1.4.15",
     "@prisma/adapter-neon": "^7.8.0",
+    "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.7.0",
     "dotenv": "^17.4.2",
     "elysia": "latest",
-    "prismabox": "^1.1.26"
+    "google-auth-library": "^11.0.2",
+    "pg": "^8.23.0",
+    "prismabox": "^1.1.26",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "bun-types": "latest",

@@ -9,6 +9,16 @@ export type ParsedItem = {
   unit_price: number;
 };
 
+export type ParsedReceipt = {
+  items: ParsedItem[];
+  store_name: string | null;
+  date: string | null;
+  vat_pct: number | null;
+  service_charge_pct: number | null;
+  subtotal: number | null;
+  total: number | null;
+};
+
 type RawParsedItem = Partial<ParsedItem> & {
   [key: string]: unknown;
   item?: string;
@@ -18,6 +28,7 @@ type RawParsedItem = Partial<ParsedItem> & {
   qty?: number | string;
   count?: number | string;
   unitPrice?: number | string;
+  lineTotal?: number | string;
   price?: number | string;
   amount?: number | string;
   total?: number | string;
@@ -28,6 +39,16 @@ type ParsedItemsResponse = {
   items?: RawParsedItem[];
   line_items?: RawParsedItem[];
   receipt_items?: RawParsedItem[];
+  store_name?: unknown;
+  store?: unknown;
+  merchant_name?: unknown;
+  date?: unknown;
+  vat_pct?: unknown;
+  vat?: unknown;
+  service_charge_pct?: unknown;
+  service_charge?: unknown;
+  subtotal?: unknown;
+  total?: unknown;
 };
 
 type NestedParsedItemsResponse = ParsedItemsResponse & {
@@ -39,29 +60,66 @@ type ChatCompletionResponse = {
   choices?: Array<{ message?: { content?: string } }>;
 };
 
+type OllamaChatResponse = {
+  message?: { content?: string };
+};
+
+const OCR_PROVIDER_TIMEOUT_MS = 45_000;
+
+async function providerFetch(input: string, init: RequestInit) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OCR_PROVIDER_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error("OCR provider timed out");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ── Prompts ───────────────────────────────────────────────────────────────────
 const VISION_PROMPT = (
-  _rawText: string,
+  rawText: string,
 ) => `You are an OCR tool specialized in Thai receipts.
-Read this receipt image carefully.
+The first image is the full receipt. If a second image is present, it is an enlarged crop of the item table.
+Use the enlarged crop to read item names, and use the full receipt to confirm row order and amounts.
+Use the receipt layout to confirm row order and match each amount to the item on the same row.
 Return ONLY valid JSON in this exact format:
 {
   "store_name": "",
   "date": "",
   "items": [
-    {"name": "", "quantity": 1, "price": 0}
+    {"name": "", "quantity": 1, "line_total": 0}
   ],
   "subtotal": 0,
-  "vat": 0,
+  "vat_pct": null,
+  "service_charge_pct": null,
   "total": 0
 }
 
 CRITICAL RULES:
-- Read the ACTUAL text printed in the image. DO NOT guess or invent names.
-- "name" must be the EXACT Thai text from the ITEM column in the receipt table.
-- "price" is the unit price from the PRICE column (not AMOUNT/total).
-- "quantity" is the number from the QTY column.
-- Only include food/drink line items. Skip SUBTOTAL, VAT, SERVICE CHARGE, TOTAL rows.`;
+- Read the ACTUAL glyphs printed in the image. DO NOT guess, translate, autocorrect, or invent names.
+- "name" must be a literal transcription of the EXACT Thai text from the ITEM column.
+- If any item name cannot be read confidently, return "[อ่านไม่ชัด]" for that name. Never replace it with a plausible menu name.
+- Zoom in on each item row before transcribing it. Preserve unusual spellings, spaces, punctuation,
+  Latin characters, and digits exactly as printed. Never substitute a plausible or well-known menu name.
+- This receipt has one numeric amount printed at the far right of each item row. Use that amount as "line_total" for the item on the SAME horizontal row.
+- Never shift an amount to the item above or below it, and do not omit the first item row even if its amount is close to the header.
+- If both unit price and line total are printed, use the line total/AMOUNT column.
+- If quantity is greater than 1, preserve the quantity and keep line_total as the total for the whole row.
+- "quantity" is the number from the QTY column. Preserve quantities greater than 1.
+- Include every food/drink row before the summary section.
+- Verify that the sum of all line_total values equals the printed subtotal or total.
+- Only include food/drink line items. Skip SUBTOTAL, VAT, SERVICE CHARGE, TOTAL rows.
+${rawText.trim() ? `- An auxiliary OCR transcript is provided below. Use it only as a cross-check; the image is authoritative.
+OCR transcript:
+"""
+${rawText}
+"""` : ""}`;
 
 const PROMPT = `You are a Thai restaurant receipt parser.
 Extract receipt data from this text.
@@ -70,18 +128,23 @@ Return only JSON:
   "store_name": "",
   "date": "",
   "items": [
-    {"name": "", "quantity": 1, "price": 0}
+    {"name": "", "quantity": 1, "line_total": 0}
   ],
   "subtotal": 0,
-  "vat": 0,
+  "vat_pct": null,
+  "service_charge_pct": null,
   "total": 0
 }
 
 Rules:
-- name: the menu/item name. The OCR text below is from a Latin script reader, so Thai text is missing or garbled.
-- You MUST reconstruct or guess the Thai food name based on the price and garbled letters.
-- If you absolutely cannot guess the food name, DO NOT return an empty string. You MUST return "รายการที่ " + index (e.g., "รายการที่ 1").
-- price is the price per single unit.`;
+- name: copy the item name exactly from the OCR text. Never translate, autocorrect, normalize, guess, or invent a name.
+- Preserve unusual Thai spellings, spaces, punctuation, Latin characters, and digits exactly as provided.
+- date: use YYYY-MM-DD when present, otherwise null.
+- vat_pct and service_charge_pct: percentages printed on the receipt, otherwise null.
+- Pair each amount with the item on the same row; never shift amounts between rows.
+- If only one amount is shown for an item row, return it as line_total.
+- If both unit price and line total are shown, return the line total/AMOUNT value as line_total.
+- Verify that the sum of line_total values equals the printed subtotal or total.`;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const toNumber = (value: unknown): number =>
@@ -117,16 +180,21 @@ const normalizeItem = (item: RawParsedItem): ParsedItem => {
       toNumber(item.quantity ?? item.qty ?? item.count ?? item["จำนวน"]) || 1,
     ),
   );
-  const unitPrice = toNumber(
+  const reportedUnitPrice = toNumber(
     item.unit_price ??
       item.unitPrice ??
       item.price ??
       item["ราคา"] ??
       item["ราคาต่อหน่วย"],
   );
-  const amount = toNumber(
-    item.amount ?? item.total ?? item.line_total ?? item["ยอดรวม"],
+  const lineTotal = toNumber(
+    item.line_total ??
+      item.lineTotal ??
+      item.amount ??
+      item.total ??
+      item["ยอดรวม"],
   );
+  const unitPrice = reportedUnitPrice || (lineTotal > 0 ? lineTotal / quantity : 0);
 
   return {
     name: String(
@@ -142,11 +210,67 @@ const normalizeItem = (item: RawParsedItem): ParsedItem => {
         "",
     ).trim(),
     quantity,
-    unit_price: Math.max(0, unitPrice || amount / quantity || 0),
+    unit_price: Math.max(0, unitPrice),
   };
 };
 
-const parseItems = (content: string): ParsedItem[] => {
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value !== null && typeof value === "object" ? value as Record<string, unknown> : {};
+
+const firstDefined = (sources: Record<string, unknown>[], keys: string[]) => {
+  for (const source of sources) {
+    for (const key of keys) {
+      if (source[key] !== undefined && source[key] !== null) return source[key];
+    }
+  }
+  return undefined;
+};
+
+const optionalNumber = (value: unknown): number | null => {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const number = toNumber(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const optionalPercentage = (value: unknown): number | null => {
+  const number = optionalNumber(value);
+  return number !== null && number >= 0 && number <= 100 ? number : null;
+};
+
+const normalizeReceiptDate = (value: unknown): string | null => {
+  if (value === undefined || value === null) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+
+  const localDate = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (localDate) {
+    const [, day, month, rawYear] = localDate;
+    const year = Number(rawYear) > 2400 ? Number(rawYear) - 543 : Number(rawYear);
+    const date = new Date(Date.UTC(year, Number(month) - 1, Number(day)));
+    if (
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === Number(month) - 1 &&
+      date.getUTCDate() === Number(day)
+    ) {
+      return date.toISOString().slice(0, 10);
+    }
+  }
+
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+};
+
+const emptyReceipt = (items: ParsedItem[]): ParsedReceipt => ({
+  items,
+  store_name: null,
+  date: null,
+  vat_pct: null,
+  service_charge_pct: null,
+  subtotal: null,
+  total: null,
+});
+
+const parseItems = (content: string): ParsedReceipt => {
   const cleaned = content
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
@@ -166,31 +290,52 @@ const parseItems = (content: string): ParsedItem[] => {
   const parsed = JSON.parse(json) as
     | NestedParsedItemsResponse
     | RawParsedItem[];
+  const response = Array.isArray(parsed) ? null : parsed;
   const items = Array.isArray(parsed)
     ? parsed
-    : parsed.items ??
-      parsed.line_items ??
-      parsed.receipt_items ??
-      parsed.data?.items ??
-      parsed.receipt?.items;
+    : response?.items ??
+      response?.line_items ??
+      response?.receipt_items ??
+      response?.data?.items ??
+      response?.receipt?.items;
   if (!Array.isArray(items))
     throw new Error("LLM returned no items array");
-  return items
+
+  const sources = response
+    ? [response, asRecord(response.data), asRecord(response.receipt)]
+    : [];
+  const normalizedItems = items
     .map(normalizeItem)
     .filter((i) => i.name && i.unit_price > 0);
+  const vatPct = optionalPercentage(firstDefined(sources, ["vat_pct", "vat_percentage", "vat"]));
+  const serviceChargePct = optionalPercentage(
+    firstDefined(sources, ["service_charge_pct", "service_charge_percentage", "service_charge", "service"]),
+  );
+
+  return {
+    ...emptyReceipt(normalizedItems),
+    store_name: String(
+      firstDefined(sources, ["store_name", "merchant_name", "store", "merchant"]) ?? "",
+    ).trim() || null,
+    date: normalizeReceiptDate(firstDefined(sources, ["date", "receipt_date", "transaction_date"])),
+    vat_pct: vatPct,
+    service_charge_pct: serviceChargePct,
+    subtotal: optionalNumber(firstDefined(sources, ["subtotal", "sub_total"])),
+    total: optionalNumber(firstDefined(sources, ["total", "grand_total"])),
+  };
 };
 
-// ── Groq Vision ──────────────────────────────────────────────────────────────
+// ── Vision providers ─────────────────────────────────────────────────────────
 const tryGroqVisionWithModel = async (
   model: string,
   rawText: string,
   imageBase64: string,
   imageMimeType: string,
-): Promise<ParsedItem[]> => {
+): Promise<ParsedReceipt> => {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY not set");
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const res = await providerFetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -231,7 +376,7 @@ const callGroqVision = async (
   rawText: string,
   imageBase64: string,
   imageMimeType: string,
-): Promise<ParsedItem[]> => {
+): Promise<ParsedReceipt> => {
   const primaryModel = process.env.GROQ_VISION_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct";
   const fallbackModel = "llama-3.2-11b-vision-preview";
 
@@ -243,14 +388,72 @@ const callGroqVision = async (
   }
 };
 
+const callOllama = async (
+  rawText: string,
+  imageBase64?: string,
+): Promise<ParsedReceipt> => {
+  const apiKey = process.env.OLLAMA_API_KEY;
+  if (!apiKey) throw new Error("OLLAMA_API_KEY not set");
+
+  const model = process.env.OLLAMA_OCR_MODEL ?? "gemma4:31b-cloud";
+  const baseUrl = (process.env.OLLAMA_BASE_URL ?? "https://ollama.com").replace(/\/$/, "");
+  const content = imageBase64
+    ? VISION_PROMPT(rawText)
+    : `${PROMPT}\n\nOCR text from receipt:\n"""\n${rawText}\n"""`;
+  const message: Record<string, unknown> = {
+    role: "user",
+    content,
+  };
+  if (imageBase64) message.images = [imageBase64];
+
+  const res = await providerFetch(`${baseUrl}/api/chat`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [message],
+      stream: false,
+      options: { temperature: 0, num_predict: 1024 },
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Ollama (${model}) responded ${res.status}: ${err}`);
+  }
+
+  const body = (await res.json()) as OllamaChatResponse;
+  const responseContent = body.message?.content;
+  if (!responseContent) throw new Error(`Ollama (${model}) empty response`);
+  return parseItems(responseContent);
+};
+
+const callVision = async (
+  rawText: string,
+  imageBase64: string,
+  imageMimeType: string,
+): Promise<ParsedReceipt> => {
+  const provider = process.env.OCR_PROVIDER ?? (process.env.OLLAMA_API_KEY ? "ollama" : "groq");
+  return provider === "ollama"
+    ? callOllama(rawText, imageBase64)
+    : callGroqVision(
+        rawText,
+        imageBase64,
+        imageMimeType,
+      );
+};
+
 
 // ── Groq text — llama-3.3-70b-versatile ──────────────────────────────────────
-const callGroqText = async (rawText: string): Promise<ParsedItem[]> => {
+const callGroqText = async (rawText: string): Promise<ParsedReceipt> => {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY not set");
   const model = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const res = await providerFetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -279,6 +482,11 @@ const callGroqText = async (rawText: string): Promise<ParsedItem[]> => {
   const content = body.choices?.[0]?.message?.content;
   if (!content) throw new Error("Groq Text empty response");
   return parseItems(content);
+};
+
+const callText = async (rawText: string): Promise<ParsedReceipt> => {
+  const provider = process.env.OCR_PROVIDER ?? (process.env.OLLAMA_API_KEY ? "ollama" : "groq");
+  return provider === "ollama" ? callOllama(rawText) : callGroqText(rawText);
 };
 
 // ── Regex fallback ────────────────────────────────────────────────────────────
@@ -611,37 +819,37 @@ export const parseReceiptText = async (
   rawText: string,
   imageBase64?: string,
   imageMimeType: string = "image/jpeg",
-): Promise<ParsedItem[]> => {
+): Promise<ParsedReceipt> => {
   const regexItems = regexFallback(rawText);
   const looseRegexItems = regexFallback(rawText, { allowUnnamedRows: true });
   const expectedItemCount = Math.max(regexItems.length, looseRegexItems.length);
 
-  // 1) Groq Vision (llama-3.2-90b-vision) — best for Thai image directly
+  // 1) Configured vision provider — best for Thai image directly
   if (imageBase64) {
     try {
-      const items = await callGroqVision(rawText, imageBase64, imageMimeType);
-      if (isCompleteEnough(items, expectedItemCount)) return items;
-      console.warn(`[ocr] Groq Vision returned ${items.length}/${expectedItemCount} items.`);
+      const parsed = await callVision(rawText, imageBase64, imageMimeType);
+      if (isCompleteEnough(parsed.items, expectedItemCount)) return parsed;
+      console.warn(`[ocr] Groq Vision returned ${parsed.items.length}/${expectedItemCount} items.`);
     } catch (err) {
       console.warn("[ocr] Groq Vision failed, trying Groq Text:", (err as Error).message);
     }
   }
 
-  // 2) Groq Text (llama-3.3-70b) — always try if rawText has content
+  // 2) Configured text provider — always try if rawText has content
   if (rawText.trim()) {
     try {
-      const items = await callGroqText(rawText);
-      if (isCompleteEnough(items, expectedItemCount)) return items;
-      console.warn(`[ocr] Groq Text returned ${items.length}/${expectedItemCount} items, trying regex`);
+      const parsed = await callText(rawText);
+      if (isCompleteEnough(parsed.items, expectedItemCount)) return parsed;
+      console.warn(`[ocr] Groq Text returned ${parsed.items.length}/${expectedItemCount} items, trying regex`);
     } catch (err) {
       console.warn("[ocr] Groq Text failed, using regex fallback:", (err as Error).message);
     }
   }
 
   // 3) Regex fallback
-  if (regexItems.length > 0) return regexItems;
-  if (looseRegexItems.length > 0) return looseRegexItems;
+  if (regexItems.length > 0) return emptyReceipt(regexItems);
+  if (looseRegexItems.length > 0) return emptyReceipt(looseRegexItems);
 
   console.warn("[ocr] No receipt items detected.");
-  return [];
+  return emptyReceipt([]);
 };

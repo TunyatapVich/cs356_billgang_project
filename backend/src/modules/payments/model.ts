@@ -8,8 +8,14 @@ export const PaymentCreatePayload = t.Object({
 });
 export type PaymentCreateRequest = Static<typeof PaymentCreatePayload>;
 
+export const PaymentLocalConfirmPayload = t.Object({
+  bill_id: t.String(),
+  from_user_id: t.String(),
+  to_user_id: t.String(),
+});
+export type PaymentLocalConfirmRequest = Static<typeof PaymentLocalConfirmPayload>;
+
 export const PaymentConfirmPayload = t.Object({
-  slip: t.Optional(t.File()),
 });
 export type PaymentConfirmRequest = Static<typeof PaymentConfirmPayload>;
 

@@ -1,11 +1,14 @@
 import { Elysia, t } from "elysia";
 import {
   BillCreatePayload,
+  BillFinalizePayload,
   BillIdParams,
+  BillItemAssignmentsPayload,
   BillItemIdParams,
   BillItemUpdatePayload,
   BillItemsPayload,
   BillJoinParams,
+  BillMemberCreatePayload,
   BillModel,
   BillOcrPayload,
   BillPatchPayload,
@@ -23,6 +26,22 @@ const handleError = (err: any, set: any) => {
   if (err?.message === "NOT_FOUND") {
     set.status = 404;
     return { message: "Not found" };
+  }
+  if (err?.message === "ITEMS_NOT_ASSIGNED") {
+    set.status = 400;
+    return { message: "Assign every item before marking the bill as paid." };
+  }
+  if (err?.message === "PAYMENT_NOT_SETTLED") {
+    set.status = 400;
+    return { message: "Complete all transfers before marking the bill as paid." };
+  }
+  if (err?.message === "ASSIGNMENT_QUANTITY_MISMATCH") {
+    set.status = 400;
+    return { message: "Assigned quantities must cover at least the item quantity." };
+  }
+  if (err?.message === "DUPLICATE_ASSIGNMENT") {
+    set.status = 400;
+    return { message: "Each person can only be assigned once per item." };
   }
   set.status = 400;
   return { message: err?.message ?? "Bad request" };
@@ -59,6 +78,23 @@ export const BillModule = new Elysia({ prefix: "/bills" })
     { body: BillCreatePayload },
   )
 
+  .post(
+    "/:id/members",
+    async ({ params, body, userid, set }) => {
+      if (!userid) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+      try {
+        const member = await BillService.addMember(userid, params.id, body);
+        return { member };
+      } catch (err: any) {
+        return handleError(err, set);
+      }
+    },
+    { params: BillIdParams, body: BillMemberCreatePayload },
+  )
+
   .get(
     "/:id",
     async ({ params, userid, set }) => {
@@ -91,6 +127,23 @@ export const BillModule = new Elysia({ prefix: "/bills" })
       }
     },
     { params: BillIdParams, body: BillPatchPayload },
+  )
+
+  .post(
+    "/:id/mark-paid",
+    async ({ params, userid, set }) => {
+      if (!userid) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+      try {
+        const bill = await BillService.markPaid(userid, params.id);
+        return { bill };
+      } catch (err: any) {
+        return handleError(err, set);
+      }
+    },
+    { params: BillIdParams },
   )
 
   .delete(
@@ -126,6 +179,27 @@ export const BillModule = new Elysia({ prefix: "/bills" })
       }
     },
     { params: BillIdParams, body: BillItemsPayload },
+  )
+
+  .post(
+    "/:id/finalize",
+    async ({ params, body, userid, set }) => {
+      if (!userid) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+      try {
+        const result = await BillService.finalizeBill(userid, params.id, body);
+        broadcast(params.id, { type: "bill_updated", bill: result.bill });
+        for (const item of result.items) {
+          broadcast(params.id, { type: "item_added", item });
+        }
+        return result;
+      } catch (err: any) {
+        return handleError(err, set);
+      }
+    },
+    { params: BillIdParams, body: BillFinalizePayload },
   )
 
   .put(
@@ -185,6 +259,23 @@ export const BillModule = new Elysia({ prefix: "/bills" })
     { params: BillItemIdParams, body: t.Object({ user_id: t.String() }) },
   )
 
+  .put(
+    "/:id/items/:itemId/assignments",
+    async ({ params, body, userid, set }) => {
+      if (!userid) {
+        set.status = 401;
+        return { message: "Unauthorized" };
+      }
+      try {
+        await BillService.setItemAssignments(userid, params.id, params.itemId, body);
+        return { message: "Assignments updated" };
+      } catch (err: any) {
+        return handleError(err, set);
+      }
+    },
+    { params: BillItemIdParams, body: BillItemAssignmentsPayload },
+  )
+
   .delete(
     "/:id/items/:itemId/assign/:assignUserId",
     async ({ params, userid, set }) => {
@@ -210,16 +301,16 @@ export const BillModule = new Elysia({ prefix: "/bills" })
         return { message: "Unauthorized" };
       }
       try {
-        const imageBase64 = body.image
-          ? Buffer.from(await body.image.arrayBuffer()).toString("base64")
-          : undefined;
+        const imageData = body.image ? await body.image.arrayBuffer() : undefined;
+        const imageBase64 = imageData ? Buffer.from(imageData).toString("base64") : undefined;
         return await BillService.runOcr(
           userid,
           params.id,
-          body.raw_text,
+          body.raw_text ?? "",
           body.image_url,
           imageBase64,
           body.image?.type,
+          imageData,
         );
       } catch (err: any) {
         return handleError(err, set);

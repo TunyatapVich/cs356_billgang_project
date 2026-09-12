@@ -17,19 +17,23 @@ class AuthService {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> register(
-    String email,
-    String phone,
-    String password,
-    String passwordConfirm,
-  ) async {
+  Future<Map<String, dynamic>> register({
+    required String email,
+    required String password,
+    required String passwordConfirm,
+    String? displayName,
+    String? promptpayNumber,
+  }) async {
     final response = await _dio.post(
       '/auth/register',
       data: {
         'email': email,
-        'promptpay_number': phone,
         'password': password,
         'password_confirm': passwordConfirm,
+        if (displayName != null && displayName.isNotEmpty)
+          'display_name': displayName,
+        if (promptpayNumber != null && promptpayNumber.isNotEmpty)
+          'promptpay_number': promptpayNumber,
       },
     );
     return response.data as Map<String, dynamic>;

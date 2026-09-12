@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
@@ -19,9 +18,9 @@ class BillService {
       '/bills',
       data: {
         'name': name,
-        'date': date.toIso8601String(),
+        'date': date.toIso8601String().substring(0, 10),
         'vat_pct': vatPercent,
-        'service_charge_pct': ?serviceChargePercent,
+        'service_charge_pct': serviceChargePercent ?? 0.0,
       },
     );
     return response.data as Map<String, dynamic>;
@@ -38,6 +37,14 @@ class BillService {
     return response.data as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> updateBill(
+    String billId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await _dio.patch('/bills/$billId', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
   Future<void> setPayer({required String billId, required String payerId}) async {
     await _dio.patch('/bills/$billId/payer', data: {'paid_by': payerId});
   }
@@ -48,6 +55,19 @@ class BillService {
 
   Future<void> settleBill(String billId) async {
     await _dio.post('/bills/$billId/settle');
+  }
+
+  Future<Map<String, dynamic>> markBillPaid(String billId) async {
+    final response = await _dio.post('/bills/$billId/mark-paid', data: {});
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> addMember(String billId, [String? name]) async {
+    final response = await _dio.post(
+      '/bills/$billId/members',
+      data: name != null && name.trim().isNotEmpty ? {'name': name.trim()} : {},
+    );
+    return response.data as Map<String, dynamic>;
   }
 
   // ── Items ──────────────────────────────────────────────────────────────────
@@ -111,6 +131,17 @@ class BillService {
     await _dio.post('/bills/$billId/items/$itemId/assign', data: {'user_id': userId});
   }
 
+  Future<void> setItemAssignments({
+    required String billId,
+    required String itemId,
+    required List<Map<String, dynamic>> assignments,
+  }) async {
+    await _dio.put(
+      '/bills/$billId/items/$itemId/assignments',
+      data: {'assignments': assignments},
+    );
+  }
+
   Future<void> unassignItem({
     required String billId,
     required String itemId,
@@ -121,6 +152,22 @@ class BillService {
 
   Future<Map<String, dynamic>> getDebts(String billId) async {
     final response = await _dio.get('/bills/$billId/debts');
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> confirmLocalPayment({
+    required String billId,
+    required String fromUserId,
+    required String toUserId,
+  }) async {
+    final response = await _dio.post(
+      '/payments/local-confirm',
+      data: {
+        'bill_id': billId,
+        'from_user_id': fromUserId,
+        'to_user_id': toUserId,
+      },
+    );
     return response.data as Map<String, dynamic>;
   }
 

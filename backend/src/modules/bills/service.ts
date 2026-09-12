@@ -1,13 +1,22 @@
 import { prisma } from "../../db";
 import { decimalToNumber } from "../utils/decimal";
+import {
+  computeOwedAndBalances,
+  computePersonSubtotals,
+  round2,
+} from "../utils/billmath";
 import { minCashFlow, type Transfer } from "../utils/mincashflow";
-import { parseReceiptText, type ParsedItem } from "../utils/ocr";
+import { parseReceiptText } from "../utils/ocr";
 import { broadcast } from "../utils/broker";
 import { UserStatsService } from "../users/service";
+import { uploadImage } from "../utils/storage";
 import type {
   BillCreateRequest,
+  BillFinalizeRequest,
+  BillItemAssignmentsRequest,
   BillItemsRequest,
   BillItemUpdateRequest,
+  BillMemberCreateRequest,
   BillPatchRequest,
 } from "./model";
 
@@ -109,7 +118,14 @@ export class BillService {
 
     if (!bill) throw new Error("NOT_FOUND");
 
-    const serialized = serializeBill({ ...bill, bill_items: undefined, bill_members: undefined });
+    const memberIds = new Set(bill.bill_members.map((member) => member.user_id));
+    const paidBy = bill.paid_by && memberIds.has(bill.paid_by) ? bill.paid_by : null;
+    const serialized = serializeBill({
+      ...bill,
+      paid_by: paidBy,
+      bill_items: undefined,
+      bill_members: undefined,
+    });
 
     return {
       bill: serialized,
@@ -148,6 +164,50 @@ export class BillService {
     return serializeBill(bill);
   }
 
+  static async addMember(userid: string, billId: string, data: BillMemberCreateRequest) {
+    await this.assertMember(userid, billId);
+
+    const existingMembers = await prisma.billMembers.findMany({
+      where: { bill_id: billId },
+      include: { user: { select: { display_name: true } } },
+    });
+    const existingNames = new Set(
+      existingMembers
+        .map((member) => member.user.display_name?.trim().toUpperCase())
+        .filter(Boolean),
+    );
+    const requestedName = data.name?.trim();
+    const generatedName =
+      requestedName ||
+      Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index)).find(
+        (name) => !existingNames.has(name),
+      ) ||
+      `Person ${existingMembers.length + 1}`;
+
+    const guest = await prisma.users.create({
+      data: {
+        email: `guest-${crypto.randomUUID()}@billgang.local`,
+        display_name: generatedName,
+      },
+    });
+    const member = await prisma.billMembers.create({
+      data: { bill_id: billId, user_id: guest.id, role: "guest" },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            display_name: true,
+            avatar_url: true,
+            promptpay_number: true,
+          },
+        },
+      },
+    });
+    broadcast(billId, { type: "member_added", member });
+    return member;
+  }
+
   static async patchBill(userid: string, billId: string, data: BillPatchRequest) {
     await this.assertOwner(userid, billId);
     const bill = await prisma.bills.update({
@@ -156,6 +216,8 @@ export class BillService {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.date !== undefined && { date: new Date(data.date) }),
         ...(data.status !== undefined && { status: data.status }),
+        ...(data.receipt_total !== undefined && { receipt_total: data.receipt_total }),
+        ...(data.charges_included !== undefined && { charges_included: data.charges_included }),
         ...(data.vat_pct !== undefined && { vat_pct: data.vat_pct }),
         ...(data.service_charge_pct !== undefined && {
           service_charge_pct: data.service_charge_pct,
@@ -178,22 +240,42 @@ export class BillService {
     const items = "items" in body ? body.items : [body];
     if (items.length === 0) return [];
 
-    if (items.length === 1) {
-      const created = await prisma.billItems.create({
-        data: { bill_id: billId, ...items[0] },
-      });
-      return [serializeItem(created)];
-    }
+    const created = items.map((item) => ({
+      id: crypto.randomUUID(),
+      bill_id: billId,
+      ...item,
+    }));
+    await prisma.billItems.createMany({ data: created });
+    return created.map(serializeItem);
+  }
 
-    await prisma.billItems.createMany({
-      data: items.map((it) => ({ bill_id: billId, ...it })),
-    });
-    const recent = await prisma.billItems.findMany({
-      where: { bill_id: billId },
-      orderBy: { created_at: "desc" },
-      take: items.length,
-    });
-    return recent.reverse().map(serializeItem);
+  static async finalizeBill(userid: string, billId: string, data: BillFinalizeRequest) {
+    await this.assertOwner(userid, billId);
+
+    const billData = {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.date !== undefined && { date: new Date(data.date) }),
+      ...(data.receipt_total !== undefined && { receipt_total: data.receipt_total }),
+      ...(data.charges_included !== undefined && { charges_included: data.charges_included }),
+      ...(data.vat_pct !== undefined && { vat_pct: data.vat_pct }),
+      ...(data.service_charge_pct !== undefined && {
+        service_charge_pct: data.service_charge_pct,
+      }),
+    };
+    const created = data.items.map((item) => ({
+      id: crypto.randomUUID(),
+      bill_id: billId,
+      ...item,
+    }));
+    const [bill] = await prisma.$transaction([
+      prisma.bills.update({ where: { id: billId }, data: billData }),
+      prisma.billItems.createMany({ data: created }),
+    ]);
+
+    return {
+      bill: serializeBill(bill),
+      items: created.map(serializeItem),
+    };
   }
 
   static async updateItem(
@@ -220,12 +302,51 @@ export class BillService {
 
   static async assignItem(userid: string, billId: string, itemId: string, assignUserId: string) {
     await this.assertMember(userid, billId);
+    await this.assertMember(assignUserId, billId);
     await prisma.itemAssigns.upsert({
       where: { bill_item_id_user_id: { bill_item_id: itemId, user_id: assignUserId } },
       create: { bill_item_id: itemId, user_id: assignUserId },
       update: {},
     });
     broadcast(billId, { type: "item_assigned", item_id: itemId, user_id: assignUserId });
+  }
+
+  static async setItemAssignments(
+    userid: string,
+    billId: string,
+    itemId: string,
+    data: BillItemAssignmentsRequest,
+  ) {
+    await this.assertMember(userid, billId);
+    const item = await prisma.billItems.findFirst({
+      where: { id: itemId, bill_id: billId },
+    });
+    if (!item) throw new Error("NOT_FOUND");
+
+    const assignments = data.assignments.filter((assignment) => assignment.quantity > 0);
+    const userIds = assignments.map((assignment) => assignment.user_id);
+    if (new Set(userIds).size !== userIds.length) throw new Error("DUPLICATE_ASSIGNMENT");
+    if (assignments.reduce((sum, assignment) => sum + assignment.quantity, 0) < item.quantity) {
+      throw new Error("ASSIGNMENT_QUANTITY_MISMATCH");
+    }
+
+    const members = await prisma.billMembers.findMany({
+      where: { bill_id: billId, user_id: { in: userIds } },
+      select: { user_id: true },
+    });
+    if (members.length !== userIds.length) throw new Error("FORBIDDEN");
+
+    await prisma.$transaction([
+      prisma.itemAssigns.deleteMany({ where: { bill_item_id: itemId } }),
+      prisma.itemAssigns.createMany({
+        data: assignments.map((assignment) => ({
+          bill_item_id: itemId,
+          user_id: assignment.user_id,
+          assigned_quantity: assignment.quantity,
+        })),
+      }),
+    ]);
+    broadcast(billId, { type: "item_assignments_updated", item_id: itemId });
   }
 
   static async unassignItem(userid: string, billId: string, itemId: string, assignUserId: string) {
@@ -243,16 +364,34 @@ export class BillService {
     imageUrl?: string,
     imageBase64?: string,
     imageMimeType?: string,
+    imageData?: ArrayBuffer,
   ) {
     await this.assertMember(userid, billId);
-    if (imageUrl) {
-      await prisma.bills.update({
-        where: { id: billId },
-        data: { receipt_image_url: imageUrl },
-      });
+    if (!rawText && !imageBase64 && !imageUrl) {
+      throw new Error("RECEIPT_REQUIRED");
     }
-    const items = await parseReceiptText(rawText, imageBase64, imageMimeType);
-    return { items } as { items: ParsedItem[] };
+    const saveReceiptImage = async () => {
+      if (!imageData && !imageUrl) return;
+      try {
+        const receiptImageUrl = imageData
+          ? await uploadImage(imageData, imageMimeType || "image/jpeg", "receipts")
+          : imageUrl;
+        if (receiptImageUrl) {
+          await prisma.bills.update({
+            where: { id: billId },
+            data: { receipt_image_url: receiptImageUrl },
+          });
+        }
+      } catch (error) {
+        console.warn(
+          "[storage] Receipt image upload/save failed; continuing without image:",
+          error instanceof Error ? error.message : error,
+        );
+      }
+    };
+    void saveReceiptImage();
+    const parsed = await parseReceiptText(rawText, imageBase64, imageMimeType);
+    return parsed;
   }
 
   static async getInvite(userid: string, billId: string) {
@@ -314,37 +453,34 @@ export class BillService {
 
     // paid_by is the person who paid; if not set, defaults to created_by
     const rawPayerId = bill.paid_by;
-    const payerId = (rawPayerId === null || rawPayerId === undefined || rawPayerId === 'null') ? bill.created_by : rawPayerId;
+    const memberIds = new Set(bill.bill_members.map((member) => member.user_id));
+    const payerId =
+      rawPayerId && memberIds.has(rawPayerId) ? rawPayerId : bill.created_by;
 
-    const subtotal: Record<string, number> = {};
-    for (const member of bill.bill_members) subtotal[member.user_id] = 0;
+    const subtotal = computePersonSubtotals(
+      bill.bill_members.map((m) => m.user_id),
+      bill.bill_items.map((item) => ({
+        unit_price: Number(decimalToNumber(item.unit_price) ?? 0),
+        quantity: item.quantity,
+        assignees: item.item_assigns.map((a) => ({
+          user_id: a.user_id,
+          assigned_quantity: a.assigned_quantity,
+        })),
+      })),
+    );
 
-    for (const item of bill.bill_items) {
-      const price = Number(decimalToNumber(item.unit_price) ?? 0);
-      const lineTotal = price * item.quantity;
-      const assignees = item.item_assigns.map((a) => a.user_id);
-      if (assignees.length === 0) continue;
-      const share = lineTotal / assignees.length;
-      for (const u of assignees) subtotal[u] = (subtotal[u] ?? 0) + share;
-    }
-
-    const vat = Number(decimalToNumber(bill.vat_pct) ?? 0) / 100;
-    const service = Number(decimalToNumber(bill.service_charge_pct) ?? 0) / 100;
-    const multiplier = (1 + service) * (1 + vat);
-
-    const owed: Record<string, number> = {};
-    let totalOwed = 0;
-    for (const [userId, amt] of Object.entries(subtotal)) {
-      const final = amt * multiplier;
-      owed[userId] = final;
-      totalOwed += final;
-    }
-
-    const balances: Record<string, number> = {};
-    for (const userId of Object.keys(owed)) {
-      balances[userId] = -owed[userId];
-    }
-    balances[payerId] = (balances[payerId] ?? 0) + totalOwed;
+    const vatPct = Number(decimalToNumber(bill.vat_pct) ?? 0);
+    const servicePct = Number(decimalToNumber(bill.service_charge_pct) ?? 0);
+    const itemSubtotal = bill.bill_items.reduce(
+      (sum, item) => sum + Number(decimalToNumber(item.unit_price) ?? 0) * item.quantity,
+      0,
+    );
+    const receiptTotal = Number(decimalToNumber(bill.receipt_total) ?? 0) || undefined;
+    const { owed, balances } = computeOwedAndBalances(subtotal, vatPct, servicePct, payerId, {
+      itemSubtotal,
+      receiptTotal,
+      chargesIncluded: bill.charges_included,
+    });
 
     const transfers: Transfer[] = minCashFlow(balances);
 
@@ -374,6 +510,7 @@ export class BillService {
   static async setPayer(userid: string, billId: string, payerId: string) {
     // Verify requesting user is a member
     await this.assertMember(userid, billId);
+    await this.assertMember(payerId, billId);
 
     const bill = await prisma.bills.update({
       where: { id: billId },
@@ -382,6 +519,32 @@ export class BillService {
     broadcast(billId, { type: "payer_set", paid_by: payerId });
     return serializeBill(bill);
   }
+
+  static async markPaid(userid: string, billId: string) {
+    const bill = await this.assertOwner(userid, billId);
+    const details = await this.getBill(userid, billId);
+    if (
+      details.items.length === 0 ||
+      details.items.some((item) => {
+        const assignedQuantity = item.item_assigns.reduce(
+          (sum: number, assign: { assigned_quantity: number | null }) =>
+            sum + (assign.assigned_quantity ?? item.quantity / item.item_assigns.length),
+          0,
+        );
+        return assignedQuantity < item.quantity;
+      })
+    ) {
+      throw new Error("ITEMS_NOT_ASSIGNED");
+    }
+    const debts = await this.getDebts(userid, billId);
+    if (debts.transfers.length > 0) throw new Error("PAYMENT_NOT_SETTLED");
+
+    const updated = await prisma.bills.update({
+      where: { id: bill.id },
+      data: { status: "settled" },
+    });
+    broadcast(billId, { type: "bill_paid", bill: serializeBill(updated) });
+    return serializeBill(updated);
+  }
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100;

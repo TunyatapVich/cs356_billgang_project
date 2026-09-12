@@ -52,17 +52,22 @@ class AuthNotifier extends AsyncNotifier<User?> {
     });
   }
 
-  Future<void> register(
-    String email,
-    String phone,
-    String password,
-    String passwordConfirm,
-  ) async {
+  Future<void> register({
+    required String email,
+    required String password,
+    required String passwordConfirm,
+    String? displayName,
+    String? promptpayNumber,
+  }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final data = await ref
-          .read(authServiceProvider)
-          .register(email, phone, password, passwordConfirm);
+      final data = await ref.read(authServiceProvider).register(
+            email: email,
+            password: password,
+            passwordConfirm: passwordConfirm,
+            displayName: displayName,
+            promptpayNumber: promptpayNumber,
+          );
       await TokenStorage.save(data['token']);
       ref.invalidate(billListProvider); // Clear cached bills for the new user
       return User.fromJson(data['user'] as Map<String, dynamic>);

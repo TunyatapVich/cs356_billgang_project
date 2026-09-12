@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { AuthModel } from "./model";
-import { AuthService } from "./service";
+import { AuthService, GoogleAuthError } from "./service";
 import { authPlugin } from "../utils/auth";
 import { uploadImage } from "../utils/storage";
 
@@ -22,8 +22,12 @@ export const AuthModule = new Elysia({ prefix: "/auth" })
         set.status = 201;
         return { token, user };
       } catch (err: any) {
-        set.status = 409;
-        return { message: err.message ?? "Registration failed" };
+        if (err?.code === "P2002" || err?.message === "Email already registered") {
+          set.status = 409;
+          return { message: "Email already registered" };
+        }
+        set.status = 500;
+        return { message: "Registration failed" };
       }
     },
     {
@@ -32,6 +36,35 @@ export const AuthModule = new Elysia({ prefix: "/auth" })
         201: "auth.response",
         400: "auth.error",
         409: "auth.error",
+        500: "auth.error",
+      },
+    },
+  )
+
+  .post(
+    "/google",
+    async ({ body, jwt, set }) => {
+      try {
+        const user = await AuthService.loginWithGoogle(body.id_token);
+        const token = await jwt.sign({ sub: user.id });
+        return { token, user };
+      } catch (err) {
+        if (err instanceof GoogleAuthError) {
+          set.status = err.status;
+          return { message: err.message };
+        }
+        console.error("[auth/google] sign-in failed", err);
+        set.status = 500;
+        return { message: "Google sign-in failed" };
+      }
+    },
+    {
+      body: "auth.google.request",
+      response: {
+        200: "auth.response",
+        401: "auth.error",
+        500: "auth.error",
+        503: "auth.error",
       },
     },
   )
